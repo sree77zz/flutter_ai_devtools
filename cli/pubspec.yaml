@@ -1,0 +1,13 @@
+name: flutter_ai_devtools_mcp
+description: Companion MCP CLI for flutter_ai_devtools. Bridges Claude Code to a running Flutter app via the VM Service protocol.
+version: 0.1.0
+repository: https://github.com/sree77zz/flutter_ai_devtools
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  vm_service: ^14.2.4
+
+executables:
+  devtools_mcp: devtools_mcp
