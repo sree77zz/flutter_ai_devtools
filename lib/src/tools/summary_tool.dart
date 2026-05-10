@@ -1,4 +1,4 @@
-import '../core/runtime_store.dart';
+﻿import '../core/runtime_store.dart';
 import '../models/frame_stats.dart';
 import '../models/render_issue.dart';
 import '../services/metrics_service.dart';
@@ -25,7 +25,7 @@ class GetRuntimeSummaryTool extends AnalystTool {
           'includeInternalMetrics': {
             'type': 'boolean',
             'description':
-                'If true, includes internal flutter_ai_analyst performance '
+                'If true, includes internal flutter_ai_devtools performance '
                 'counters in the response.',
             'default': false,
           },

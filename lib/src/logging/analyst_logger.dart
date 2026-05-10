@@ -1,4 +1,4 @@
-import 'dart:developer' as dev;
+﻿import 'dart:developer' as dev;
 
 /// Log level for [AnalystLogger].
 enum LogLevel { debug, info, warning, error }
@@ -37,10 +37,10 @@ class AnalystLogger {
     StackTrace? stack,
   ) {
     if (level.index < minimumLevel.index) return;
-    final prefix = '[flutter_ai_analyst][$name][${level.name.toUpperCase()}]';
+    final prefix = '[flutter_ai_devtools][$name][${level.name.toUpperCase()}]';
     dev.log(
       '$prefix $message',
-      name: 'flutter_ai_analyst',
+      name: 'flutter_ai_devtools',
       level: _devLevel(level),
       error: error,
       stackTrace: stack,

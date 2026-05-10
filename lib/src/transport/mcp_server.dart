@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 // dart:io is available on Android/iOS/macOS/Linux/Windows but NOT on web.
 // MCP stdio/TCP transports are only meaningful on native targets anyway.
@@ -20,13 +20,13 @@ import 'session_manager.dart';
 /// The MCP protocol (Model Context Protocol) specifies a JSON-RPC 2.0
 /// transport. This server implements:
 ///   - initialize / initialized handshake
-///   - tools/list  — returns registered tool manifests
-///   - tools/call  — dispatches to [ToolRegistry]
+///   - tools/list  â€” returns registered tool manifests
+///   - tools/call  â€” dispatches to [ToolRegistry]
 ///
 /// Two transports are supported:
-///   - [startStdio] — communicate via stdin/stdout (compatible with Claude
+///   - [startStdio] â€” communicate via stdin/stdout (compatible with Claude
 ///     Desktop, Cursor, VSCode MCP extensions)
-///   - [startTcp]   — listen on a TCP port for remote AI clients
+///   - [startTcp]   â€” listen on a TCP port for remote AI clients
 class AnalystMcpServer {
   AnalystMcpServer({
     required ToolRegistry toolRegistry,
@@ -49,7 +49,7 @@ class AnalystMcpServer {
   ServerSocket? _serverSocket;
   StreamSubscription<String>? _stdioSub;
 
-  // ── Public API ─────────────────────────────────────────────────────────────
+  // â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /// Start an MCP server reading from stdin and writing to stdout.
   ///
@@ -106,7 +106,7 @@ class AnalystMcpServer {
 
   bool get isRunning => _running;
 
-  // ── Transport handlers ─────────────────────────────────────────────────────
+  // â”€â”€ Transport handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   void _handleTcpSocket(Socket socket) {
     // Reject unauthenticated connections when tokens are configured.
@@ -159,7 +159,7 @@ class AnalystMcpServer {
     stdout.writeln(jsonEncode(json));
   }
 
-  // ── Protocol handling ──────────────────────────────────────────────────────
+  // â”€â”€ Protocol handling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Future<void> _handleLine(
     String line,
@@ -221,7 +221,7 @@ class AnalystMcpServer {
         'tools': {'listChanged': false},
       },
       'serverInfo': {
-        'name': 'flutter_ai_analyst',
+        'name': 'flutter_ai_devtools',
         'version': '0.1.0',
         'description':
             'AI-native Flutter runtime intelligence platform. Inspect widget '

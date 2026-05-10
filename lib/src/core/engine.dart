@@ -1,4 +1,4 @@
-import 'dart:async' show Future, unawaited;
+﻿import 'dart:async' show Future, unawaited;
 
 import 'package:flutter/widgets.dart';
 
@@ -36,12 +36,12 @@ import 'tool_registry.dart';
 
 enum EngineState { idle, starting, running, stopping, stopped }
 
-/// The central orchestrator of the flutter_ai_analyst platform.
+/// The central orchestrator of the flutter_ai_devtools platform.
 ///
 /// [AnalystEngine] wires together all subsystems: collectors, adapters,
 /// the event bus, runtime store, analyzer pipeline, and MCP server.
 ///
-/// Typical usage — call once in main():
+/// Typical usage â€” call once in main():
 /// ```dart
 /// void main() async {
 ///   WidgetsFlutterBinding.ensureInitialized();
@@ -93,7 +93,7 @@ class AnalystEngine {
 
   final _log = AnalystLogger.forName('Engine');
 
-  // ── Public accessors ────────────────────────────────────────────────────────
+  // â”€â”€ Public accessors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   EventBus get eventBus => _eventBus;
   RuntimeStore get store => _store;
@@ -108,7 +108,7 @@ class AnalystEngine {
   NavigatorObserver get navigatorObserver =>
       (_collectors['route_collector'] as RouteCollector).observer;
 
-  // ── Lifecycle ───────────────────────────────────────────────────────────────
+  // â”€â”€ Lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   static Future<AnalystEngine> create(AnalystConfig config) async {
     if (_instance != null) {
@@ -170,7 +170,7 @@ class AnalystEngine {
     _log.info('AnalystEngine stopped');
   }
 
-  // ── Registration ────────────────────────────────────────────────────────────
+  // â”€â”€ Registration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   void _registerDefaultCollectors() {
     final cfg = _configManager;
@@ -245,7 +245,7 @@ class AnalystEngine {
       ..addStep(RenderIssueAnalyzerStep());
   }
 
-  // ── Adapter registration (public API) ────────────────────────────────────────
+  // â”€â”€ Adapter registration (public API) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   void registerAdapter(AnalystAdapter adapter) {
     _extensionRegistry.register(adapter);
@@ -254,13 +254,13 @@ class AnalystEngine {
     }
   }
 
-  // ── Tool registration (public API) ───────────────────────────────────────────
+  // â”€â”€ Tool registration (public API) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   void registerTool(AnalystTool tool) {
     _toolRegistry.register(tool);
   }
 
-  // ── Event routing ────────────────────────────────────────────────────────────
+  // â”€â”€ Event routing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   void _setupEventRouting() {
     _eventBus.events.listen((event) {
@@ -272,7 +272,7 @@ class AnalystEngine {
     });
   }
 
-  // ── Scheduler ────────────────────────────────────────────────────────────────
+  // â”€â”€ Scheduler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   void _setupScheduler() {
     final intervalMs = _configManager.current.analyzerPipelineIntervalMs;
@@ -296,7 +296,7 @@ class AnalystEngine {
     }
   }
 
-  // ── MCP Server ────────────────────────────────────────────────────────────────
+  // â”€â”€ MCP Server â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   void _setupMcpServer() {
     final cfg = _configManager.current;

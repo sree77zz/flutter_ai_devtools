@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
@@ -8,7 +8,7 @@ import '../services/config_manager.dart';
 import '../tools/base_tool.dart';
 import 'engine.dart';
 
-/// High-level bootstrap API for [flutter_ai_analyst].
+/// High-level bootstrap API for [flutter_ai_devtools].
 ///
 /// Wrap your `runApp` call:
 /// ```dart
@@ -35,7 +35,7 @@ class FlutterAiAnalyst {
 
   /// Initialize the analyst engine.
   ///
-  /// Safe to call multiple times — subsequent calls are no-ops.
+  /// Safe to call multiple times â€” subsequent calls are no-ops.
   static Future<void> initialize({
     AnalystConfig config = const AnalystConfig(),
     McpTransport mcpTransport = McpTransport.none,
@@ -96,10 +96,10 @@ enum McpTransport {
   /// No transport started; start manually via the engine.
   none,
 
-  /// JSON-RPC over stdin/stdout — compatible with Claude Desktop and most IDE
+  /// JSON-RPC over stdin/stdout â€” compatible with Claude Desktop and most IDE
   /// MCP extensions.
   stdio,
 
-  /// JSON-RPC over a TCP socket — for remote AI clients.
+  /// JSON-RPC over a TCP socket â€” for remote AI clients.
   tcp,
 }

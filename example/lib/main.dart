@@ -1,9 +1,9 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_ai_analyst/flutter_ai_analyst.dart';
+import 'package:flutter_ai_devtools/flutter_ai_devtools.dart';
 
-/// Example demonstrating flutter_ai_analyst integration.
+/// Example demonstrating flutter_ai_devtools integration.
 ///
 /// Run this app, then connect Claude Desktop or Cursor to the MCP server at
 /// localhost:8765. Ask Claude: "What is the current route?" or
@@ -38,7 +38,7 @@ class ExampleApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'flutter_ai_analyst Example',
+      title: 'flutter_ai_devtools Example',
       debugShowCheckedModeBanner: false,
       // Attach the NavigatorObserver to capture route events.
       navigatorObservers: [FlutterAiAnalyst.navigatorObserver],
@@ -56,7 +56,7 @@ class ExampleApp extends StatelessWidget {
   }
 }
 
-// ── Home Screen ──────────────────────────────────────────────────────────────
+// â”€â”€ Home Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -67,7 +67,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _counter = 0;
-  String _status = 'Analyst engine running…';
+  String _status = 'Analyst engine runningâ€¦';
 
   @override
   void initState() {
@@ -83,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('flutter_ai_analyst'),
+        title: const Text('flutter_ai_devtools'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: Padding(
@@ -132,13 +132,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _triggerTestError() {
     FlutterError.reportError(FlutterErrorDetails(
-      exception: Exception('Test error from flutter_ai_analyst example'),
+      exception: Exception('Test error from flutter_ai_devtools example'),
       stack: StackTrace.current,
       library: 'example',
       context: ErrorDescription('triggered manually for demonstration'),
     ));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Test error emitted — check MCP client!')),
+      const SnackBar(content: Text('Test error emitted â€” check MCP client!')),
     );
   }
 }
@@ -185,7 +185,7 @@ class _McpInfoCard extends StatelessWidget {
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
-            const Text('TCP → localhost:8765'),
+            const Text('TCP â†’ localhost:8765'),
             const SizedBox(height: 4),
             const Text(
               'Available tools: get_runtime_summary, get_widget_tree, '
@@ -200,7 +200,7 @@ class _McpInfoCard extends StatelessWidget {
   }
 }
 
-// ── Detail Screen ─────────────────────────────────────────────────────────────
+// â”€â”€ Detail Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class DetailScreen extends StatelessWidget {
   const DetailScreen({super.key});
@@ -226,7 +226,7 @@ class DetailScreen extends StatelessWidget {
   }
 }
 
-// ── Settings Screen ───────────────────────────────────────────────────────────
+// â”€â”€ Settings Screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});

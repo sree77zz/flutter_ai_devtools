@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_ai_analyst/flutter_ai_analyst.dart';
+﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_ai_devtools/flutter_ai_devtools.dart';
 
 void main() {
   group('DataNormalizer', () {
@@ -30,7 +30,7 @@ void main() {
         type: RuntimeEventType.widgetRebuilt,
         timestamp: DateTime.now(),
         source: 'test',
-        payload: {'a': 'hello', 'b': null},
+        payload: const {'a': 'hello', 'b': null},
       );
       final normalized = normalizer.normalize(event);
       expect(normalized.payload.containsKey('b'), isFalse);
@@ -98,7 +98,7 @@ void main() {
   });
 
   group('FrameStats', () {
-    test('isJanky when total > 16666µs', () {
+    test('isJanky when total > 16666Âµs', () {
       final janky = FrameStats(
         frameNumber: 1,
         buildDurationMicros: 12000,
@@ -159,7 +159,7 @@ void main() {
         type: RuntimeEventType.navigationPush,
         timestamp: DateTime.now(),
         source: 'test',
-        payload: {'route': '/home'},
+        payload: const {'route': '/home'},
       );
       bus.publish(event);
 
@@ -177,14 +177,14 @@ void main() {
         type: RuntimeEventType.navigationPush,
         timestamp: DateTime.now(),
         source: 's',
-        payload: {},
+        payload: const {},
       ));
       bus.publish(RuntimeEvent(
         id: 'e2',
         type: RuntimeEventType.flutterError,
         timestamp: DateTime.now(),
         source: 's',
-        payload: {},
+        payload: const {},
       ));
 
       await Future<void>.delayed(Duration.zero);
@@ -238,9 +238,9 @@ void main() {
         type: RuntimeEventType.widgetRebuilt,
         timestamp: DateTime(2025, 1, 1),
         source: 'widget_collector',
-        payload: {'widgetType': 'Text', 'totalRebuilds': 5},
+        payload: const {'widgetType': 'Text', 'totalRebuilds': 5},
         severity: EventSeverity.info,
-        tags: {'widget'},
+        tags: const {'widget'},
       );
       final json = event.toJson();
       final restored = RuntimeEvent.fromJson(json);

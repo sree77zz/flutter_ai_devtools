@@ -1,4 +1,4 @@
-/// flutter_ai_analyst — AI-native Flutter runtime intelligence platform.
+﻿/// flutter_ai_devtools â€” AI-native Flutter runtime intelligence platform.
 ///
 /// Exposes Flutter app internals to AI clients (Claude, Cursor, Gemini,
 /// Codex, VSCode AI agents) in real time via the MCP protocol.
@@ -27,24 +27,24 @@
 ///
 /// ```
 /// AI Clients (Claude / Cursor / Gemini / Codex / VSCode)
-///      │  MCP Protocol (JSON-RPC 2.0)
-///      ▼
-/// AnalystMcpServer  ─── ToolRegistry ──────────── 8 built-in tools
-///      │
-///      ▼
+///      â”‚  MCP Protocol (JSON-RPC 2.0)
+///      â–¼
+/// AnalystMcpServer  â”€â”€â”€ ToolRegistry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ 8 built-in tools
+///      â”‚
+///      â–¼
 /// AnalystEngine (core orchestrator)
-///   ├── EventBus          (broadcast stream hub)
-///   ├── RuntimeStore      (bounded circular buffers)
-///   ├── AnalyzerEngine    (pluggable insight pipeline)
-///   ├── ExtensionRegistry (optional adapters)
-///   └── Collectors
-///         ├── WidgetCollector   (widget tree + rebuilds)
-///         ├── ErrorCollector    (FlutterError + PlatformDispatcher)
-///         ├── RouteCollector    (NavigatorObserver)
-///         ├── FrameCollector    (SchedulerBinding.addTimingsCallback)
-///         └── RenderCollector   (overflow / constraint errors)
+///   â”œâ”€â”€ EventBus          (broadcast stream hub)
+///   â”œâ”€â”€ RuntimeStore      (bounded circular buffers)
+///   â”œâ”€â”€ AnalyzerEngine    (pluggable insight pipeline)
+///   â”œâ”€â”€ ExtensionRegistry (optional adapters)
+///   â””â”€â”€ Collectors
+///         â”œâ”€â”€ WidgetCollector   (widget tree + rebuilds)
+///         â”œâ”€â”€ ErrorCollector    (FlutterError + PlatformDispatcher)
+///         â”œâ”€â”€ RouteCollector    (NavigatorObserver)
+///         â”œâ”€â”€ FrameCollector    (SchedulerBinding.addTimingsCallback)
+///         â””â”€â”€ RenderCollector   (overflow / constraint errors)
 /// ```
-library flutter_ai_analyst;
+library flutter_ai_devtools;
 
 // Bootstrap / public API
 export 'src/core/bootstrap.dart';
