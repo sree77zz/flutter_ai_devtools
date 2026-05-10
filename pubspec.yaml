@@ -26,5 +26,8 @@ dev_dependencies:
     sdk: flutter
   mockito: ^5.4.4
 
+executables:
+  devtools_mcp: devtools_mcp
+
 flutter:
   uses-material-design: false
