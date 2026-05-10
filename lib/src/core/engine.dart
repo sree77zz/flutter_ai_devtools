@@ -33,6 +33,7 @@ import 'event_bus.dart';
 import 'extension_registry.dart';
 import 'runtime_store.dart';
 import 'tool_registry.dart';
+import 'vm_service_extensions.dart';
 
 enum EngineState { idle, starting, running, stopping, stopped }
 
@@ -141,6 +142,7 @@ class AnalystEngine {
     _setupEventRouting();
     _setupScheduler();
     _setupMcpServer();
+    _registerVmServiceExtensions();
 
     _state = EngineState.running;
     _log.info('AnalystEngine running. MCP server: ${_mcpServer != null}');
@@ -309,6 +311,13 @@ class AnalystEngine {
       security: security,
       sessionManager: sessionManager,
     );
+  }
+
+  void _registerVmServiceExtensions() {
+    VmServiceExtensions(
+      toolRegistry: _toolRegistry,
+      store: _store,
+    ).registerAll();
   }
 
   /// Start MCP server in stdio mode (Claude Desktop / VSCode extensions).
