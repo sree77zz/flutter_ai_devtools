@@ -2,7 +2,15 @@
 import 'dart:convert';
 // dart:io is available on Android/iOS/macOS/Linux/Windows but NOT on web.
 // MCP stdio/TCP transports are only meaningful on native targets anyway.
-import 'dart:io' show stdin, stdout, ServerSocket, Socket;
+import 'dart:io'
+    show
+        ContentType,
+        HttpRequest,
+        HttpServer,
+        ServerSocket,
+        Socket,
+        stdin,
+        stdout;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:uuid/uuid.dart';
@@ -47,7 +55,9 @@ class AnalystMcpServer {
 
   bool _running = false;
   ServerSocket? _serverSocket;
+  HttpServer? _httpServer;
   StreamSubscription<String>? _stdioSub;
+  final _sseSessions = <String, StreamController<String>>{};
 
   // â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -97,10 +107,103 @@ class AnalystMcpServer {
     }
   }
 
+  /// Start an MCP server over HTTP + Server-Sent Events (SSE).
+  ///
+  /// Claude Code connects with:
+  ///   claude mcp add flutter-ai-devtools --transport sse http://localhost:[port]/sse
+  ///
+  /// Only supported on native (non-web) targets.
+  Future<void> startSse({int port = 8765, String host = 'localhost'}) async {
+    _assertNative('startSse');
+    _running = true;
+    _httpServer = await HttpServer.bind(host, port);
+    _log.info('MCP SSE server listening on http://$host:$port/sse');
+
+    _httpServer!.listen((HttpRequest req) async {
+      req.response.headers
+        ..add('Access-Control-Allow-Origin', '*')
+        ..add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        ..add('Access-Control-Allow-Headers', 'Content-Type');
+
+      if (req.method == 'OPTIONS') {
+        req.response.statusCode = 200;
+        await req.response.close();
+        return;
+      }
+
+      if (req.uri.path == '/sse' && req.method == 'GET') {
+        await _handleSseUpgrade(req);
+      } else if (req.uri.path == '/message' && req.method == 'POST') {
+        await _handleSseMessage(req);
+      } else {
+        req.response.statusCode = 404;
+        await req.response.close();
+      }
+    });
+  }
+
+  Future<void> _handleSseUpgrade(HttpRequest req) async {
+    final sessionId = _uuid.v4();
+    final controller = StreamController<String>();
+    _sseSessions[sessionId] = controller;
+
+    req.response
+      ..statusCode = 200
+      ..headers.contentType =
+          ContentType('text', 'event-stream', charset: 'utf-8')
+      ..headers.add('Cache-Control', 'no-cache')
+      ..headers.add('Connection', 'keep-alive');
+
+    req.response.write('event: endpoint\ndata: /message?sessionId=$sessionId\n\n');
+    await req.response.flush();
+
+    _log.info('SSE client connected: $sessionId');
+    _sessionManager.createSession(sessionId: sessionId, clientId: sessionId);
+
+    try {
+      await for (final event in controller.stream) {
+        req.response.write('event: message\ndata: $event\n\n');
+        await req.response.flush();
+      }
+    } catch (_) {
+      // Client disconnected.
+    } finally {
+      _sseSessions.remove(sessionId);
+      _sessionManager.removeSession(sessionId);
+      if (!controller.isClosed) await controller.close();
+      await req.response.close();
+      _log.info('SSE client disconnected: $sessionId');
+    }
+  }
+
+  Future<void> _handleSseMessage(HttpRequest req) async {
+    final sessionId = req.uri.queryParameters['sessionId'];
+    // ignore: close_sinks — owned and closed by _handleSseUpgrade's finally block.
+    final controller = sessionId != null ? _sseSessions[sessionId] : null;
+
+    final body = await utf8.decoder.bind(req).join();
+
+    req.response.statusCode = 202;
+    await req.response.close();
+
+    if (controller == null || controller.isClosed) return;
+
+    void write(Map<String, dynamic> json) {
+      if (!controller.isClosed) controller.add(jsonEncode(json));
+    }
+
+    await _handleLine(body, write);
+  }
+
   Future<void> stop() async {
     _running = false;
     await _stdioSub?.cancel();
     await _serverSocket?.close();
+    await _httpServer?.close(force: true);
+    for (final c in _sseSessions.values) {
+      await c.close();
+    }
+    _sseSessions.clear();
     _log.info('MCP server stopped');
   }
 

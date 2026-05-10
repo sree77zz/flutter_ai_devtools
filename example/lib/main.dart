@@ -24,7 +24,7 @@ Future<void> main() async {
       frameWindowSize: 300,
       errorHistorySize: 100,
     ),
-    mcpTransport: McpTransport.tcp,
+    mcpTransport: McpTransport.sse,
     // Optionally add adapters:
     // adapters: [BlocAdapter(FlutterAiAnalyst.engine.eventBus)],
   );

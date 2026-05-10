@@ -64,10 +64,12 @@ class FlutterAiAnalyst {
         await engine.startMcpStdio();
       case McpTransport.tcp:
         await engine.startMcpTcp(port: mcpPort);
+      case McpTransport.sse:
+        await engine.startMcpSse(port: mcpPort);
       case McpTransport.none:
         _log.info(
-          'MCP transport not started. Call engine.startMcpStdio() or '
-          'engine.startMcpTcp() manually.',
+          'MCP transport not started. Call engine.startMcpSse() for '
+          'Claude Code integration.',
         );
     }
 
@@ -96,10 +98,15 @@ enum McpTransport {
   /// No transport started; start manually via the engine.
   none,
 
-  /// JSON-RPC over stdin/stdout â€” compatible with Claude Desktop and most IDE
+  /// JSON-RPC over stdin/stdout — compatible with Claude Desktop and most IDE
   /// MCP extensions.
   stdio,
 
-  /// JSON-RPC over a TCP socket â€” for remote AI clients.
+  /// JSON-RPC over a raw TCP socket — for remote AI clients.
   tcp,
+
+  /// JSON-RPC over HTTP + Server-Sent Events — the recommended transport for
+  /// Claude Code. Register once with:
+  ///   claude mcp add flutter-ai-devtools --transport sse http://localhost:8765/sse
+  sse,
 }

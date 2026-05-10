@@ -335,4 +335,17 @@ class AnalystEngine {
     );
     _log.info('MCP TCP transport active on ${cfg.mcpHost}:${port ?? cfg.mcpPort}');
   }
+
+  /// Start MCP server over HTTP + SSE for Claude Code and AI IDE integrations.
+  ///
+  /// Register with Claude Code:
+  ///   claude mcp add flutter-ai-devtools --transport sse http://localhost:[port]/sse
+  Future<void> startMcpSse({int? port}) async {
+    final cfg = _configManager.current;
+    await _mcpServer!.startSse(
+      port: port ?? cfg.mcpPort,
+      host: cfg.mcpHost,
+    );
+    _log.info('MCP SSE transport active on http://${cfg.mcpHost}:${port ?? cfg.mcpPort}/sse');
+  }
 }
