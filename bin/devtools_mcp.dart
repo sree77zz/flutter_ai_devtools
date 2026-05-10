@@ -90,8 +90,12 @@ Future<bool> _tryConnect() async {
 
   try {
     stderr.writeln('[flutter_ai_devtools] Connecting to VM service: $uri');
-    final wsUri = uri.replace(scheme: uri.scheme == 'http' ? 'ws' : 'wss');
-    _service = await vmServiceConnectUri('$wsUri/ws');
+    // Strip trailing slash to avoid ws://host:port//ws double-slash.
+    final base = uri.toString().replaceAll(RegExp(r'/+$'), '');
+    final wsBase = base.replaceFirst(RegExp(r'^http'), 'ws');
+    final wsUrl = '$wsBase/ws';
+    stderr.writeln('[flutter_ai_devtools] WebSocket: $wsUrl');
+    _service = await vmServiceConnectUri(wsUrl);
     stderr.writeln('[flutter_ai_devtools] Connected to Flutter app.');
     return true;
   } catch (e) {
@@ -201,13 +205,22 @@ Future<Map<String, dynamic>> _handleToolCall(
   final name = params['name'] as String?;
   if (name == null) throw Exception('"name" is required');
   final args = Map<String, dynamic>.from(params['arguments'] as Map? ?? {});
-  final result = await _callTool(name, args);
-  return {
-    'content': [
-      {'type': 'text', 'text': jsonEncode(result)},
-    ],
-    'isError': false,
-  };
+  try {
+    final result = await _callTool(name, args);
+    return {
+      'content': [
+        {'type': 'text', 'text': jsonEncode(result)},
+      ],
+      'isError': false,
+    };
+  } catch (e) {
+    return {
+      'content': [
+        {'type': 'text', 'text': e.toString()},
+      ],
+      'isError': true,
+    };
+  }
 }
 
 void _write(Map<String, dynamic> json) {
