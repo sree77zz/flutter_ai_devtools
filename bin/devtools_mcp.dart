@@ -1,8 +1,8 @@
 /// flutter_ai_devtools companion MCP server.
 ///
 /// Connects lazily to a running Flutter app via the VM Service protocol.
-/// Starts serving MCP over stdio immediately — no need to have the app
-/// running before Claude Code launches this process.
+/// Starts serving MCP over stdio immediately with a static tool list —
+/// no need to have the app running before Claude Code launches this process.
 ///
 /// Usage:
 ///   devtools_mcp [--vm-service-uri <uri>]
@@ -17,20 +17,68 @@ import 'package:vm_service/vm_service_io.dart';
 
 const _ext = 'ext.flutter_ai_devtools';
 
-// Lazy connection state — populated on first tool call.
+// Lazy connection state.
 VmService? _service;
-List<Map<String, dynamic>> _cachedTools = [];
 Uri? _explicitUri;
 
 Future<void> main(List<String> args) async {
   _explicitUri = _parseUriOrNull(args);
-  stderr.writeln('[flutter_ai_devtools] MCP server ready. Waiting for tool calls...');
-
-  // Try connecting in the background so tools/list populates early.
+  stderr.writeln('[flutter_ai_devtools] MCP server ready.');
   unawaited(_tryConnect());
-
   await _serveMcp();
 }
+
+// ── Static tool definitions ────────────────────────────────────────────────
+// Hardcoded so Claude always sees tools even before the app is running.
+
+const _staticTools = [
+  {
+    'name': 'get_widget_tree',
+    'description': 'Returns the current Flutter widget tree of the running app.',
+    'inputSchema': {'type': 'object', 'properties': <String, dynamic>{}, 'required': <String>[]},
+  },
+  {
+    'name': 'get_current_route',
+    'description': 'Returns the active navigation route of the running Flutter app.',
+    'inputSchema': {'type': 'object', 'properties': <String, dynamic>{}, 'required': <String>[]},
+  },
+  {
+    'name': 'get_recent_errors',
+    'description': 'Returns recent Flutter and platform errors captured by the app.',
+    'inputSchema': {
+      'type': 'object',
+      'properties': {
+        'limit': {'type': 'integer', 'description': 'Max number of errors to return (default 10).'},
+      },
+      'required': <String>[],
+    },
+  },
+  {
+    'name': 'get_render_issues',
+    'description': 'Returns detected rendering issues such as overflow or large repaint regions.',
+    'inputSchema': {'type': 'object', 'properties': <String, dynamic>{}, 'required': <String>[]},
+  },
+  {
+    'name': 'get_frame_stats',
+    'description': 'Returns frame timing statistics including FPS and jank percentage.',
+    'inputSchema': {'type': 'object', 'properties': <String, dynamic>{}, 'required': <String>[]},
+  },
+  {
+    'name': 'analyze_performance',
+    'description': 'Runs the AI analyzer pipeline and returns performance insights and recommendations.',
+    'inputSchema': {'type': 'object', 'properties': <String, dynamic>{}, 'required': <String>[]},
+  },
+  {
+    'name': 'analyze_rebuilds',
+    'description': 'Analyzes widget rebuild counts and identifies widgets rebuilding too frequently.',
+    'inputSchema': {'type': 'object', 'properties': <String, dynamic>{}, 'required': <String>[]},
+  },
+  {
+    'name': 'get_runtime_summary',
+    'description': 'Returns a full runtime health snapshot: routes, errors, frames, rebuilds, and insights.',
+    'inputSchema': {'type': 'object', 'properties': <String, dynamic>{}, 'required': <String>[]},
+  },
+];
 
 // ── Connection ─────────────────────────────────────────────────────────────
 
@@ -44,10 +92,7 @@ Future<bool> _tryConnect() async {
     stderr.writeln('[flutter_ai_devtools] Connecting to VM service: $uri');
     final wsUri = uri.replace(scheme: uri.scheme == 'http' ? 'ws' : 'wss');
     _service = await vmServiceConnectUri('$wsUri/ws');
-    _cachedTools = await _listTools(_service!);
-    stderr.writeln(
-      '[flutter_ai_devtools] Connected. ${_cachedTools.length} tools available.',
-    );
+    stderr.writeln('[flutter_ai_devtools] Connected to Flutter app.');
     return true;
   } catch (e) {
     _service = null;
@@ -56,38 +101,21 @@ Future<bool> _tryConnect() async {
   }
 }
 
-/// Ensures we have a live connection, retrying if needed.
 Future<VmService> _requireService() async {
   if (_service != null) return _service!;
 
-  stderr.writeln('[flutter_ai_devtools] Attempting to connect to Flutter app...');
+  stderr.writeln('[flutter_ai_devtools] Connecting to Flutter app...');
   for (var attempt = 0; attempt < 10; attempt++) {
     if (await _tryConnect()) return _service!;
     await Future<void>.delayed(const Duration(seconds: 1));
   }
 
   throw Exception(
-    'Flutter app not found. Make sure it is running with "flutter run", '
-    'then try again. Or restart Claude Code after starting the app.',
+    'Flutter app not reachable. Run "flutter run" first, then retry.',
   );
 }
 
 // ── VM Service helpers ──────────────────────────────────────────────────────
-
-Future<List<Map<String, dynamic>>> _listTools(VmService service) async {
-  try {
-    final isolateId = await _getMainIsolateId(service);
-    final response = await service.callServiceExtension(
-      '$_ext.list_tools',
-      isolateId: isolateId,
-    );
-    final json =
-        jsonDecode(response.json?['result'] as String? ?? '{}') as Map;
-    return List<Map<String, dynamic>>.from(json['tools'] as List? ?? []);
-  } catch (_) {
-    return [];
-  }
-}
 
 Future<String> _getMainIsolateId(VmService service) async {
   final vm = await service.getVM();
@@ -128,8 +156,7 @@ Future<void> _serveMcp() async {
 
     final id = request['id'];
     final method = request['method'] as String?;
-    final params =
-        Map<String, dynamic>.from(request['params'] as Map? ?? {});
+    final params = Map<String, dynamic>.from(request['params'] as Map? ?? {});
 
     try {
       final result = await _dispatch(method, params);
@@ -160,12 +187,7 @@ Future<dynamic> _dispatch(
         },
       },
     'initialized' => null,
-    'tools/list' => {
-        // Return cached tools, or attempt a connection to populate them.
-        'tools': _cachedTools.isNotEmpty
-            ? _cachedTools
-            : await _fetchToolsOrEmpty(),
-      },
+    'tools/list' => {'tools': _staticTools},
     'tools/call' => await _handleToolCall(params),
     'ping' => {'pong': true},
     null => throw Exception('method is required'),
@@ -173,20 +195,12 @@ Future<dynamic> _dispatch(
   };
 }
 
-Future<List<Map<String, dynamic>>> _fetchToolsOrEmpty() async {
-  try {
-    if (await _tryConnect()) return _cachedTools;
-  } catch (_) {}
-  return [];
-}
-
 Future<Map<String, dynamic>> _handleToolCall(
   Map<String, dynamic> params,
 ) async {
   final name = params['name'] as String?;
   if (name == null) throw Exception('"name" is required');
-  final args =
-      Map<String, dynamic>.from(params['arguments'] as Map? ?? {});
+  final args = Map<String, dynamic>.from(params['arguments'] as Map? ?? {});
   final result = await _callTool(name, args);
   return {
     'content': [
