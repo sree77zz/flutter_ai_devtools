@@ -229,18 +229,31 @@ Uri? _parseUriOrNull(List<String> args) {
 }
 
 Future<Uri?> _discoverVmServiceUri() async {
-  stderr.writeln('[flutter_ai_devtools] Scanning for Flutter app on localhost...');
-  for (var port = 8100; port <= 8200; port++) {
+  // Check environment variable first — most reliable.
+  final envUri = Platform.environment['FLUTTER_VM_SERVICE_URI'];
+  if (envUri != null && envUri.isNotEmpty) {
+    stderr.writeln('[flutter_ai_devtools] Using FLUTTER_VM_SERVICE_URI: $envUri');
+    return Uri.parse(envUri);
+  }
+
+  // Scan ports Flutter commonly uses when --vm-service-port is set.
+  stderr.writeln('[flutter_ai_devtools] Scanning common ports for Flutter VM service...');
+  for (var port = 8080; port <= 8200; port++) {
     try {
-      final socket = await Socket.connect(
-        'localhost',
-        port,
-        timeout: const Duration(milliseconds: 100),
-      );
+      final socket = await Socket.connect('localhost', port,
+          timeout: const Duration(milliseconds: 50));
       socket.destroy();
       stderr.writeln('[flutter_ai_devtools] Found open port: $port');
       return Uri.parse('http://localhost:$port');
     } catch (_) {}
   }
+
+  stderr.writeln(
+    '[flutter_ai_devtools] Auto-discovery failed.\n'
+    'Fix: run your app with a fixed port:\n'
+    '  flutter run --vm-service-port 8181\n'
+    'Or set the env variable:\n'
+    '  FLUTTER_VM_SERVICE_URI=http://127.0.0.1:<port>/<token>/',
+  );
   return null;
 }
