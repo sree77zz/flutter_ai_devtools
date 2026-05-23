@@ -23,7 +23,7 @@ class RenderCollector extends BaseCollector {
 
   @override
   Future<void> onStop() async {
-    if (_prevHandler != null) FlutterError.onError = _prevHandler;
+    FlutterError.onError = _prevHandler;
   }
 
   void _intercept(FlutterErrorDetails details) {
