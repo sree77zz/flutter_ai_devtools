@@ -18,13 +18,11 @@ class FlutterAiDevtools {
   static final List<BaseCollector> _collectors = [];
   static dynamic _mcpServer;
 
-  static NavigatorObserver get observer {
-    _routeCollector ??= RouteCollector(
-      store: _store ?? RuntimeStore(),
-      config: const CollectorConfig(),
-    );
-    return _routeCollector!.observer;
-  }
+  /// A permanent delegating observer that forwards navigation events to the
+  /// current [_routeCollector] (if any). Safe to register with [MaterialApp]
+  /// before [start] is called — it becomes a no-op until [start] initialises
+  /// [_routeCollector], and reverts to a no-op again after [stop].
+  static final NavigatorObserver observer = _DelegatingNavigatorObserver();
 
   static RuntimeStore? get store => _store;
 
@@ -56,7 +54,7 @@ class FlutterAiDevtools {
       _collectors.add(RenderCollector(store: _store!, config: collectors));
     }
 
-    // Start in reverse order so stop order (also reversed) chains correctly.
+    // RenderCollector and ErrorCollector both hook FlutterError.onError, so stop must reverse start order.
     for (final c in _collectors) {
       await c.start();
     }
@@ -75,6 +73,7 @@ class FlutterAiDevtools {
     _collectors.clear();
     await (_mcpServer as dynamic)?.stop();
     _mcpServer = null;
+    _routeCollector = null;
     await deleteLockfile();
     _store = null;
   }
@@ -92,4 +91,24 @@ class FlutterAiDevtools {
   ) {
     _mcpStarter = starter;
   }
+}
+
+class _DelegatingNavigatorObserver extends NavigatorObserver {
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) =>
+      FlutterAiDevtools._routeCollector?.observer.didPush(route, previousRoute);
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) =>
+      FlutterAiDevtools._routeCollector?.observer.didPop(route, previousRoute);
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) =>
+      FlutterAiDevtools._routeCollector?.observer
+          .didReplace(newRoute: newRoute, oldRoute: oldRoute);
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) =>
+      FlutterAiDevtools._routeCollector?.observer
+          .didRemove(route, previousRoute);
 }
