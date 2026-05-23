@@ -10,14 +10,15 @@ class StdioServer {
   StreamSubscription<String>? _sub;
 
   void start() {
+    if (_sub != null) return;
     _sub = stdin
         .transform(utf8.decoder)
         .transform(const LineSplitter())
-        .listen(_onLine, onError: (_) => stop(), onDone: stop);
+        .listen(_onLine, onError: (_) => unawaited(stop()), onDone: () => unawaited(stop()));
   }
 
-  void stop() {
-    _sub?.cancel();
+  Future<void> stop() async {
+    await _sub?.cancel();
     _sub = null;
   }
 
@@ -57,14 +58,17 @@ class StdioServer {
       case 'tools/list':
         return {'tools': dispatcher.toolManifests};
       case 'tools/call':
-        final name = params['name'] as String;
+        final name = params['name'];
+        if (name is! String) {
+          throw const FormatException('tools/call requires string "name"');
+        }
         final args = params['arguments'] as Map<String, dynamic>? ?? {};
         final content = await dispatcher.dispatch(name, args);
         return ToolDispatcher.mcpResult(content);
       case 'ping':
         return {'timestamp': DateTime.now().toIso8601String()};
       default:
-        throw 'Method not found: $method';
+        throw FormatException('Method not found: $method');
     }
   }
 

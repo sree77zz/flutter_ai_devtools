@@ -12,6 +12,7 @@ class SseServer {
   final ToolDispatcher dispatcher;
   final RuntimeStore store;
   HttpServer? _server;
+  StreamSubscription<HttpRequest>? _sub;
   final _sessions = <String, StreamController<String>>{};
   final _uuid = const Uuid();
 
@@ -19,12 +20,16 @@ class SseServer {
   /// Completes only after the server is actively listening.
   Future<int> bind(int port, {String host = 'localhost'}) async {
     _server = await HttpServer.bind(host, port);
-    _server!.listen(_handle);
+    _sub = _server!.listen(_handle, onError: (e) {
+      stderr.writeln('[SseServer] Error: $e');
+    });
     return _server!.port;
   }
 
   Future<void> stop() async {
-    for (final c in _sessions.values) {
+    await _sub?.cancel();
+    _sub = null;
+    for (final c in _sessions.values.toList()) {
       await c.close();
     }
     _sessions.clear();
@@ -63,10 +68,23 @@ class SseServer {
 
       req.response.write('event: endpoint\ndata: /\n\n');
 
+      // Close the controller when the client disconnects.
+      unawaited(req.response.done.then((_) {
+        if (!controller.isClosed) controller.close();
+      }, onError: (_) {
+        if (!controller.isClosed) controller.close();
+      }));
+
       await for (final msg in controller.stream) {
-        req.response.write('data: $msg\n\n');
+        try {
+          req.response.write('data: $msg\n\n');
+        } catch (_) {
+          break;
+        }
       }
-      await req.response.close();
+      try {
+        await req.response.close();
+      } catch (_) {}
     } finally {
       _sessions.remove(sessionId);
       if (!controller.isClosed) await controller.close();
@@ -122,14 +140,17 @@ class SseServer {
       case 'tools/list':
         return {'tools': dispatcher.toolManifests};
       case 'tools/call':
-        final name = params['name'] as String;
+        final name = params['name'];
+        if (name is! String) {
+          throw const FormatException('tools/call requires string "name"');
+        }
         final args = params['arguments'] as Map<String, dynamic>? ?? {};
         final content = await dispatcher.dispatch(name, args);
         return ToolDispatcher.mcpResult(content);
       case 'ping':
         return {'timestamp': DateTime.now().toIso8601String()};
       default:
-        throw 'Method not found: $method';
+        throw FormatException('Method not found: $method');
     }
   }
 

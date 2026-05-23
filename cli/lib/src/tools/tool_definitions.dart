@@ -97,8 +97,8 @@ void registerDefaultTools(ToolDispatcher d, RuntimeStore store) {
       }
       final topRebuilds = (store.widgetRebuildCounts.entries.toList()
             ..sort((a, b) => b.value.compareTo(a.value)))
-          .take(5)
           .where((e) => e.value > 50)
+          .take(5)
           .toList();
       if (topRebuilds.isNotEmpty) {
         insights.add({
