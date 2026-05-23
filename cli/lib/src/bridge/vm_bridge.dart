@@ -32,10 +32,19 @@ class VmBridge {
 
     try {
       final normalized = vmUri.endsWith('/') ? vmUri : '$vmUri/';
-      final ws = '${normalized.replaceFirst(RegExp(r'^http'), 'ws')}ws';
+      final wsBase = normalized
+          .replaceFirst('https://', 'wss://')
+          .replaceFirst('http://', 'ws://');
+      final ws = '${wsBase}ws';
       _service = await vmServiceConnectUri(ws);
       final vm = await _service!.getVM();
-      _mainIsolateId = vm.isolates?.first.id;
+      final isolates = vm.isolates;
+      if (isolates == null || isolates.isEmpty) {
+        stderr.writeln('✗ No isolates found in Flutter app');
+        _service = null;
+        return false;
+      }
+      _mainIsolateId = isolates.first.id;
       stderr.writeln('✓ Connected to Flutter app (pid $lockPid)');
       return true;
     } catch (e) {

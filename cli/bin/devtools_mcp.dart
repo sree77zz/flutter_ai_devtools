@@ -14,7 +14,9 @@ Future<void> main() async {
     stderr.writeln('⧗ Waiting for Flutter app... (Ctrl+C to cancel)');
     for (var i = 0; i < 15 && !connected; i++) {
       await Future<void>.delayed(const Duration(seconds: 2));
-      connected = await bridge.connect();
+      try {
+        connected = await bridge.connect();
+      } catch (_) {}
     }
     if (!connected) {
       stderr.writeln('✗ Could not connect after 30s. Is your Flutter app running?');
@@ -28,9 +30,12 @@ Future<void> main() async {
   final server = StdioServer(dispatcher: dispatcher);
   server.start();
 
-  // Keep alive until stdin closes (Claude disconnects).
-  await stdin.drain<List<int>>();
-  await bridge.dispose();
+  try {
+    // Keep alive until stdin closes (Claude disconnects).
+    await stdin.drain<List<int>>();
+  } finally {
+    await bridge.dispose();
+  }
 }
 
 void _registerBridgeTools(ToolDispatcher d, VmBridge bridge) {
