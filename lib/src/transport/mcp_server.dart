@@ -149,6 +149,7 @@ class AnalystMcpServer {
 
     req.response
       ..statusCode = 200
+      ..bufferOutput = false
       ..headers.contentType =
           ContentType('text', 'event-stream', charset: 'utf-8')
       ..headers.add('Cache-Control', 'no-cache')

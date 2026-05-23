@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(dart analyze *)",
-      "Bash(dart pub *)"
+      "Bash(dart pub *)",
+      "PowerShell(Stop-Process *)"
     ]
   }
 }
