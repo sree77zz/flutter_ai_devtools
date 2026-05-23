@@ -1,27 +1,15 @@
-﻿import 'package:flutter/foundation.dart';
+// lib/src/collectors/render_collector.dart
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
-
-import '../core/runtime_store.dart';
 import '../models/render_issue.dart';
-import '../models/runtime_event.dart';
 import 'base_collector.dart';
 
-/// Detects render-tree problems by intercepting [FlutterError.onError] for
-/// overflow errors and by scanning the render tree for constraint issues.
-///
-/// Flutter emits specific error strings for overflow/unbounded constraints
-/// that this collector pattern-matches against before forwarding the error
-/// to [ErrorCollector].
+/// Detects render-tree problems by intercepting [FlutterError.onError] and
+/// pattern-matching against known overflow / constraint error strings.
 class RenderCollector extends BaseCollector {
-  RenderCollector({
-    required super.eventBus,
-    required super.config,
-    required RuntimeStore store,
-  }) : _store = store;
+  RenderCollector({required super.store, required super.config});
 
-  final RuntimeStore _store;
   final _uuid = const Uuid();
-
   FlutterExceptionHandler? _prevHandler;
 
   @override
@@ -41,10 +29,10 @@ class RenderCollector extends BaseCollector {
   void _intercept(FlutterErrorDetails details) {
     _prevHandler?.call(details);
     final msg = details.exceptionAsString();
-    _tryClassifyRenderError(msg, details);
+    _tryClassify(msg, details);
   }
 
-  void _tryClassifyRenderError(String msg, FlutterErrorDetails details) {
+  void _tryClassify(String msg, FlutterErrorDetails details) {
     RenderIssueKind? kind;
     RenderIssueSeverity severity = RenderIssueSeverity.warning;
 
@@ -59,30 +47,16 @@ class RenderCollector extends BaseCollector {
 
     if (kind == null) return;
 
-    // Try to extract the widget type from the error context.
     final widgetType = details.context?.toString() ?? 'Unknown';
+    final description = msg.length > 400 ? '${msg.substring(0, 400)}…' : msg;
 
-    final issue = RenderIssue(
+    store.addRenderIssue(RenderIssue(
       id: _uuid.v4(),
       kind: kind,
-      description: msg.length > 400 ? '${msg.substring(0, 400)}â€¦' : msg,
+      description: description,
       widgetType: widgetType,
       capturedAt: DateTime.now(),
       severity: severity,
-    );
-
-    _store.addRenderIssue(issue);
-    eventBus.publish(RuntimeEvent(
-      id: _uuid.v4(),
-      type: RuntimeEventType.renderIssueDetected,
-      timestamp: issue.capturedAt,
-      source: id,
-      severity: severity == RenderIssueSeverity.error
-          ? EventSeverity.error
-          : EventSeverity.warning,
-      payload: issue.toJson(),
     ));
-
-    log.warning('Render issue detected: ${kind.name} in $widgetType');
   }
 }

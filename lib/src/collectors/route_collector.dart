@@ -1,15 +1,13 @@
-﻿import 'package:flutter/widgets.dart';
+// lib/src/collectors/route_collector.dart
+import 'package:flutter/widgets.dart';
 import 'package:uuid/uuid.dart';
-
-import '../core/runtime_store.dart';
 import '../models/route_info.dart';
-import '../models/runtime_event.dart';
 import 'base_collector.dart';
 
-/// [NavigatorObserver] that tracks push/pop/replace events.
+/// [NavigatorObserver] that tracks push/pop/replace/remove events.
 ///
 /// Attach [AnalystNavigatorObserver] to your app's Navigator via
-/// [MaterialApp.navigatorObservers] or pass it through [FlutterAiAnalyst.navigatorObserver].
+/// [MaterialApp.navigatorObservers] or through the devtools initialisation.
 class AnalystNavigatorObserver extends NavigatorObserver {
   AnalystNavigatorObserver(this._collector);
 
@@ -17,19 +15,11 @@ class AnalystNavigatorObserver extends NavigatorObserver {
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) =>
-      _collector._onRouteEvent(
-        route,
-        previousRoute,
-        RouteEventKind.push,
-      );
+      _collector._onRouteEvent(route, previousRoute, RouteEventKind.push);
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) =>
-      _collector._onRouteEvent(
-        previousRoute,
-        route,
-        RouteEventKind.pop,
-      );
+      _collector._onRouteEvent(previousRoute, route, RouteEventKind.pop);
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
@@ -43,18 +33,13 @@ class AnalystNavigatorObserver extends NavigatorObserver {
       _collector._onRouteEvent(route, previousRoute, RouteEventKind.remove);
 }
 
-/// Collects navigation events and maintains a route stack in [RuntimeStore].
+/// Collects navigation events and persists the latest [RouteInfo] in
+/// [RuntimeStore].
 class RouteCollector extends BaseCollector {
-  RouteCollector({
-    required super.eventBus,
-    required super.config,
-    required RuntimeStore store,
-  }) : _store = store;
+  RouteCollector({required super.store, required super.config});
 
-  final RuntimeStore _store;
   final _uuid = const Uuid();
   final _stack = <String>[];
-  final _history = <RouteInfo>[];
 
   late final AnalystNavigatorObserver observer =
       AnalystNavigatorObserver(this);
@@ -64,8 +49,7 @@ class RouteCollector extends BaseCollector {
 
   @override
   Future<void> onStart() async {
-    // NavigatorObserver is attached externally by user; no binding hook needed.
-    log.info('RouteCollector ready. Attach observer to your Navigator.');
+    // NavigatorObserver is attached externally; no binding hook needed here.
   }
 
   @override
@@ -79,7 +63,6 @@ class RouteCollector extends BaseCollector {
     final name = _routeName(route);
     final prevName = _routeName(previous);
 
-    // Update the stack.
     switch (kind) {
       case RouteEventKind.push:
       case RouteEventKind.initial:
@@ -91,42 +74,16 @@ class RouteCollector extends BaseCollector {
         if (_stack.isNotEmpty) _stack[_stack.length - 1] = name;
     }
 
-    final info = RouteInfo(
+    store.updateRoute(RouteInfo(
       id: _uuid.v4(),
       name: name,
       kind: kind,
       timestamp: DateTime.now(),
       arguments: route?.settings.arguments,
       previousRoute: prevName,
-    );
-
-    final limit = config.current.routeHistorySize;
-    if (_history.length >= limit) _history.removeAt(0);
-    _history.add(info);
-
-    _store.updateNavigation(NavigationState(
-      currentRoute: _stack.isNotEmpty ? _stack.last : '/',
-      stack: List.of(_stack),
-      history: List.of(_history),
-    ));
-
-    eventBus.publish(RuntimeEvent(
-      id: _uuid.v4(),
-      type: _kindToEventType(kind),
-      timestamp: info.timestamp,
-      source: id,
-      payload: info.toJson(),
     ));
   }
 
   String _routeName(Route<dynamic>? route) =>
       route?.settings.name ?? route.runtimeType.toString();
-
-  RuntimeEventType _kindToEventType(RouteEventKind kind) => switch (kind) {
-        RouteEventKind.push || RouteEventKind.initial =>
-          RuntimeEventType.navigationPush,
-        RouteEventKind.pop || RouteEventKind.remove =>
-          RuntimeEventType.navigationPop,
-        RouteEventKind.replace => RuntimeEventType.navigationReplace,
-      };
 }

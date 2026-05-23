@@ -1,27 +1,13 @@
-﻿import 'dart:async';
-
+// lib/src/collectors/widget_collector.dart
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:uuid/uuid.dart';
-
-import '../core/runtime_store.dart';
-import '../models/runtime_event.dart';
 import '../models/widget_snapshot.dart';
 import 'base_collector.dart';
 
-/// Collects widget-tree snapshots and per-widget rebuild counts.
-///
-/// Hooks into [WidgetInspectorService] and [debugPrintRebuildDirtyWidgets]
-/// to capture rebuild events without modifying user code.
 class WidgetCollector extends BaseCollector {
-  WidgetCollector({
-    required super.eventBus,
-    required super.config,
-    required RuntimeStore store,
-  }) : _store = store;
+  WidgetCollector({required super.store, required super.config});
 
-  final RuntimeStore _store;
-  final _uuid = const Uuid();
   Timer? _snapshotTimer;
 
   @override
@@ -29,119 +15,79 @@ class WidgetCollector extends BaseCollector {
 
   @override
   Future<void> onStart() async {
-    // Enable rebuild tracking in debug mode.
-    if (kDebugMode) {
-      debugPrintRebuildDirtyWidgets = true;
-    }
-
-    // Periodic widget-tree snapshots.
-    _snapshotTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      _captureWidgetTree();
-    });
+    if (kDebugMode) debugPrintRebuildDirtyWidgets = true;
+    _snapshotTimer = Timer.periodic(const Duration(seconds: 3), (_) => _capture());
   }
 
   @override
   Future<void> onStop() async {
     _snapshotTimer?.cancel();
-    if (kDebugMode) {
-      debugPrintRebuildDirtyWidgets = false;
-    }
+    if (kDebugMode) debugPrintRebuildDirtyWidgets = false;
   }
 
-  void _captureWidgetTree() {
+  void _capture() {
     try {
-      final root = _buildWidgetNode(
+      final counter = _Counter();
+      final root = _buildNode(
         WidgetsBinding.instance.rootElement,
         depth: 0,
-        maxDepth: config.current.widgetSnapshotMaxDepth,
+        maxDepth: config.widgetSnapshotMaxDepth,
+        maxNodes: config.widgetSnapshotMaxNodes,
+        count: counter,
       );
-      final snapshot = WidgetTreeSnapshot(
+      store.updateWidgetTree(WidgetTreeSnapshot(
         capturedAt: DateTime.now(),
         root: root,
         totalNodes: root?.totalNodes ?? 0,
         maxDepth: root?.maxDepth ?? 0,
-      );
-      _store.updateWidgetTree(snapshot);
-      eventBus.publish(RuntimeEvent(
-        id: _uuid.v4(),
-        type: RuntimeEventType.widgetTreeSnapshot,
-        timestamp: DateTime.now(),
-        source: id,
-        payload: {
-          'totalNodes': snapshot.totalNodes,
-          'maxDepth': snapshot.maxDepth,
-        },
       ));
-    } catch (e, st) {
-      log.warning('Widget tree capture failed', e, st);
-    }
+    } catch (_) {}
   }
 
-  WidgetNode? _buildWidgetNode(
+  WidgetNode? _buildNode(
     Element? element, {
     required int depth,
     required int maxDepth,
+    required int maxNodes,
+    required _Counter count,
   }) {
-    if (element == null) return null;
-    if (depth > maxDepth) return null;
-
-    final widget = element.widget;
-    final type = widget.runtimeType.toString();
-    final key = widget.key?.toString();
-
+    if (element == null || depth > maxDepth || count.value >= maxNodes) return null;
+    count.value++;
+    final type = element.widget.runtimeType.toString();
     Rect? rect;
     if (element is RenderObjectElement) {
       final ro = element.renderObject;
       if (ro is RenderBox && ro.hasSize) {
         final offset = ro.localToGlobal(Offset.zero);
-        final size = ro.size;
-        rect = Rect.fromLTWH(offset.dx, offset.dy, size.width, size.height);
+        rect = Rect.fromLTWH(offset.dx, offset.dy, ro.size.width, ro.size.height);
       }
     }
-
     final children = <WidgetNode>[];
-    var nodeCount = 0;
-    final maxNodes = config.current.widgetSnapshotMaxNodes;
-
     element.visitChildren((child) {
-      if (nodeCount >= maxNodes) return;
-      final node = _buildWidgetNode(child, depth: depth + 1, maxDepth: maxDepth);
-      if (node != null) {
-        children.add(node);
-        nodeCount += node.totalNodes;
-      }
+      final node = _buildNode(child,
+          depth: depth + 1,
+          maxDepth: maxDepth,
+          maxNodes: maxNodes,
+          count: count);
+      if (node != null) children.add(node);
     });
-
     return WidgetNode(
       id: '${type}_$depth',
       type: type,
       depth: depth,
-      key: key,
+      key: element.widget.key?.toString(),
       bounds: rect == null
           ? null
           : WidgetBounds(
-              x: rect.left,
-              y: rect.top,
-              width: rect.width,
-              height: rect.height,
-            ),
+              x: rect.left, y: rect.top, width: rect.width, height: rect.height),
       children: children,
-      rebuildCount: _store.widgetRebuildCounts[type] ?? 0,
+      rebuildCount: store.widgetRebuildCounts[type] ?? 0,
     );
   }
 
-  /// Called by the engine when a rebuild event is detected externally.
-  void recordRebuild(String widgetType) {
-    _store.incrementRebuild(widgetType);
-    eventBus.publish(RuntimeEvent(
-      id: _uuid.v4(),
-      type: RuntimeEventType.widgetRebuilt,
-      timestamp: DateTime.now(),
-      source: id,
-      payload: {
-        'widgetType': widgetType,
-        'totalRebuilds': _store.widgetRebuildCounts[widgetType] ?? 0,
-      },
-    ));
-  }
+  void recordRebuild(String widgetType) => store.incrementRebuild(widgetType);
+}
+
+class _Counter {
+  int value = 0;
 }

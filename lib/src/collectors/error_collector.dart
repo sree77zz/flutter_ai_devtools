@@ -1,101 +1,63 @@
+// lib/src/collectors/error_collector.dart
 import 'package:flutter/foundation.dart';
-import 'package:uuid/uuid.dart';
-
-import '../core/runtime_store.dart';
 import '../models/error_report.dart';
-import '../models/runtime_event.dart';
 import 'base_collector.dart';
 
-/// Captures Flutter and platform errors, deduplicates, and persists them in
-/// [RuntimeStore].
-///
-/// Hooks:
-/// - [FlutterError.onError] — framework errors (overflow, null widgets, …)
-/// - [PlatformDispatcher.instance.onError] — unhandled async/isolate errors
 class ErrorCollector extends BaseCollector {
-  ErrorCollector({
-    required super.eventBus,
-    required super.config,
-    required RuntimeStore store,
-  }) : _store = store;
+  ErrorCollector({required super.store, required super.config});
 
-  final RuntimeStore _store;
-  final _uuid = const Uuid();
-
-  FlutterExceptionHandler? _previousFlutterHandler;
-  // PlatformDispatcher.onError typedef lives in dart:ui; use the raw signature.
-  bool Function(Object, StackTrace)? _previousPlatformHandler;
+  FlutterExceptionHandler? _prevFlutter;
+  bool Function(Object, StackTrace)? _prevPlatform;
 
   @override
   String get id => 'error_collector';
 
   @override
   Future<void> onStart() async {
-    _previousFlutterHandler = FlutterError.onError;
-    FlutterError.onError = _handleFlutterError;
-
-    _previousPlatformHandler = PlatformDispatcher.instance.onError;
-    PlatformDispatcher.instance.onError = _handlePlatformError;
+    _prevFlutter = FlutterError.onError;
+    FlutterError.onError = _onFlutter;
+    _prevPlatform = PlatformDispatcher.instance.onError;
+    PlatformDispatcher.instance.onError = _onPlatform;
   }
 
   @override
   Future<void> onStop() async {
-    FlutterError.onError = _previousFlutterHandler;
-    PlatformDispatcher.instance.onError = _previousPlatformHandler ?? (_,__) => false;
+    FlutterError.onError = _prevFlutter;
+    PlatformDispatcher.instance.onError = _prevPlatform ?? (_, __) => false;
   }
 
-  void _handleFlutterError(FlutterErrorDetails details) {
-    // Forward to the previous handler first (keeps DevTools working).
-    _previousFlutterHandler?.call(details);
-
-    final message = details.exceptionAsString();
-    final stack = details.stack?.toString();
-    final report = ErrorReport(
-      id: _stableId(message),
+  void _onFlutter(FlutterErrorDetails d) {
+    _prevFlutter?.call(d);
+    final msg = d.exceptionAsString();
+    store.addError(ErrorReport(
+      id: _id(msg),
       capturedAt: DateTime.now(),
       category: ErrorCategory.flutter,
-      message: message,
-      stackTrace: stack,
-      context: {
-        'library': details.library ?? 'unknown',
-        'context': details.context?.toString(),
-      },
+      message: msg,
+      stackTrace: d.stack?.toString(),
+      context: {'library': d.library ?? 'unknown'},
       isFatal: false,
-    );
-    _publish(report);
+    ));
   }
 
-  bool _handlePlatformError(Object error, StackTrace stack) {
-    final message = error.toString();
-    final report = ErrorReport(
-      id: _stableId(message),
+  bool _onPlatform(Object error, StackTrace stack) {
+    final msg = error.toString();
+    store.addError(ErrorReport(
+      id: _id(msg),
       capturedAt: DateTime.now(),
       category: ErrorCategory.platform,
-      message: message,
+      message: msg,
       stackTrace: stack.toString(),
       isFatal: true,
-    );
-    _publish(report);
-    return _previousPlatformHandler?.call(error, stack) ?? false;
-  }
-
-  void _publish(ErrorReport report) {
-    _store.addError(report);
-    eventBus.publish(RuntimeEvent(
-      id: _uuid.v4(),
-      type: RuntimeEventType.flutterError,
-      timestamp: report.capturedAt,
-      source: id,
-      severity: report.isFatal ? EventSeverity.critical : EventSeverity.error,
-      payload: report.toJson(),
     ));
-    log.error('Captured ${report.category.name} error: ${report.message}');
+    return _prevPlatform?.call(error, stack) ?? false;
   }
 
-  /// Stable ID for deduplication — first 64 chars of the message.
-  String _stableId(String message) {
-    final normalized = message.trim().replaceAll(RegExp(r'\s+'), ' ');
-    final key = normalized.length > 64 ? normalized.substring(0, 64) : normalized;
-    return key.hashCode.toUnsigned(32).toRadixString(16);
+  String _id(String msg) {
+    final key = msg.trim().replaceAll(RegExp(r'\s+'), ' ');
+    return (key.length > 64 ? key.substring(0, 64) : key)
+        .hashCode
+        .toUnsigned(32)
+        .toRadixString(16);
   }
 }
