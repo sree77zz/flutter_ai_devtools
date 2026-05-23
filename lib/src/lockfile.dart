@@ -28,10 +28,21 @@ Future<Map<String, dynamic>?> readLockfile() async {
   }
 }
 
-bool isProcessAlive(int pid) {
-  if (Platform.isWindows) return true; // lockfile presence is the primary signal
+bool isProcessAlive(int targetPid) {
+  if (Platform.isWindows) {
+    try {
+      // Use tasklist to check if process exists
+      final result = Process.runSync(
+        'tasklist',
+        ['/FI', 'PID eq $targetPid', '/NH', '/FO', 'CSV'],
+      );
+      return result.stdout.toString().contains('"$targetPid"');
+    } catch (_) {
+      return true; // assume alive if check fails
+    }
+  }
   try {
-    Process.killPid(pid, ProcessSignal.sigusr1);
+    Process.killPid(targetPid, ProcessSignal.sigusr1);
     return true;
   } catch (_) {
     return false;

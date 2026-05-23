@@ -17,6 +17,7 @@ class FlutterAiDevtools {
   static RouteCollector? _routeCollector;
   static final List<BaseCollector> _collectors = [];
   static dynamic _mcpServer;
+  static bool _running = false;
 
   /// A permanent delegating observer that forwards navigation events to the
   /// current [_routeCollector] (if any). Safe to register with [MaterialApp]
@@ -32,13 +33,18 @@ class FlutterAiDevtools {
     CollectorConfig collectors = const CollectorConfig(),
     List<Object> extraTools = const [],
   }) async {
+    if (_running) await stop();
+    _running = true;
+
     _store = RuntimeStore(
       maxErrors: collectors.maxErrors,
       maxFrames: collectors.maxFrames,
       maxRenderIssues: collectors.maxRenderIssues,
     );
 
-    _routeCollector = RouteCollector(store: _store!, config: collectors);
+    if (collectors.routes) {
+      _routeCollector = RouteCollector(store: _store!, config: collectors);
+    }
 
     _collectors.clear();
     if (collectors.widgets) {
@@ -76,6 +82,7 @@ class FlutterAiDevtools {
     _routeCollector = null;
     await deleteLockfile();
     _store = null;
+    _running = false;
   }
 
   static Future<Object> Function(
