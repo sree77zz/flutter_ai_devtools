@@ -39,14 +39,9 @@ void main() {
 
   group('RuntimeStore', () {
     late RuntimeStore store;
-    late ConfigManager config;
 
     setUp(() {
-      config = ConfigManager(const AnalystConfig(
-        errorHistorySize: 3,
-        frameWindowSize: 5,
-      ));
-      store = RuntimeStore(config);
+      store = RuntimeStore(maxErrors: 3, maxFrames: 5, maxRenderIssues: 10);
     });
 
     test('bounds error history', () {
@@ -94,6 +89,26 @@ void main() {
       store.incrementRebuild('Container');
       expect(store.widgetRebuildCounts['Text'], equals(2));
       expect(store.widgetRebuildCounts['Container'], equals(1));
+    });
+
+    test('currentRoute returns null before any route update', () {
+      expect(store.currentRoute, isNull);
+    });
+
+    test('updateRoute sets currentRoute', () {
+      final route = RouteInfo(
+        id: 'r1',
+        name: '/home',
+        kind: RouteEventKind.push,
+        timestamp: DateTime.now(),
+      );
+      store.updateRoute(route);
+      expect(store.currentRoute?.name, equals('/home'));
+    });
+
+    test('frameSummary returns zeros when empty', () {
+      expect(store.frameSummary.fps, equals(0));
+      expect(store.frameSummary.jankyFrames, equals(0));
     });
   });
 

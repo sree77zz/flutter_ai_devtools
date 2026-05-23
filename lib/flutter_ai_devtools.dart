@@ -63,7 +63,8 @@ export 'src/models/render_issue.dart';
 
 // Core subsystems (for advanced users)
 export 'src/core/event_bus.dart';
-export 'src/core/runtime_store.dart';
+export 'src/core/runtime_store.dart' hide RuntimeStore;
+export 'src/store/runtime_store.dart';
 export 'src/core/tool_registry.dart';
 export 'src/core/extension_registry.dart';
 export 'src/core/analyzer_engine.dart';
