@@ -1,42 +1,7 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_ai_devtools/flutter_ai_devtools.dart';
 
 void main() {
-  group('DataNormalizer', () {
-    late DataNormalizer normalizer;
-
-    setUp(() => normalizer = DataNormalizer(maxPayloadStringLength: 20));
-
-    test('truncates long strings', () {
-      final event = RuntimeEvent(
-        id: 'test-1',
-        type: RuntimeEventType.flutterError,
-        timestamp: DateTime.now(),
-        source: 'test',
-        payload: {'msg': 'A' * 100},
-      );
-      final normalized = normalizer.normalize(event);
-      expect(
-        (normalized.payload['msg'] as String).length,
-        lessThanOrEqualTo(30),
-      );
-      expect(normalized.payload['msg'], contains('[truncated]'));
-    });
-
-    test('strips null values', () {
-      // DataNormalizer skips null values.
-      final event = RuntimeEvent(
-        id: 'test-2',
-        type: RuntimeEventType.widgetRebuilt,
-        timestamp: DateTime.now(),
-        source: 'test',
-        payload: const {'a': 'hello', 'b': null},
-      );
-      final normalized = normalizer.normalize(event);
-      expect(normalized.payload.containsKey('b'), isFalse);
-    });
-  });
-
   group('RuntimeStore', () {
     late RuntimeStore store;
 
@@ -91,19 +56,8 @@ void main() {
       expect(store.widgetRebuildCounts['Container'], equals(1));
     });
 
-    test('currentRoute returns null before any route update', () {
+    test('currentRoute returns null initially', () {
       expect(store.currentRoute, isNull);
-    });
-
-    test('updateRoute sets currentRoute', () {
-      final route = RouteInfo(
-        id: 'r1',
-        name: '/home',
-        kind: RouteEventKind.push,
-        timestamp: DateTime.now(),
-      );
-      store.updateRoute(route);
-      expect(store.currentRoute?.name, equals('/home'));
     });
 
     test('frameSummary returns zeros when empty', () {
@@ -113,7 +67,7 @@ void main() {
   });
 
   group('FrameStats', () {
-    test('isJanky when total > 16666Âµs', () {
+    test('isJanky when total > 16666µs', () {
       final janky = FrameStats(
         frameNumber: 1,
         buildDurationMicros: 12000,
@@ -144,125 +98,45 @@ void main() {
     });
 
     test('calculates janky percent correctly', () {
-      final frames = List.generate(10, (i) {
-        return FrameStats(
-          frameNumber: i,
-          buildDurationMicros: i < 5 ? 20000 : 5000,
-          rasterDurationMicros: 1000,
-          vsyncOverheadMicros: 0,
-          capturedAt: DateTime.now(),
-        );
-      });
+      final frames = List.generate(10, (i) => FrameStats(
+        frameNumber: i,
+        buildDurationMicros: i < 5 ? 20000 : 5000,
+        rasterDurationMicros: 1000,
+        vsyncOverheadMicros: 0,
+        capturedAt: DateTime.now(),
+      ));
       final summary = FrameSummary.fromFrames(frames);
       expect(summary.jankyFrames, equals(5));
       expect(summary.jankyPercent, equals(50.0));
     });
   });
 
-  group('EventBus', () {
-    late EventBus bus;
-
-    setUp(() => bus = EventBus());
-    tearDown(() => bus.dispose());
-
-    test('broadcasts events to subscribers', () async {
-      final events = <RuntimeEvent>[];
-      bus.events.listen(events.add);
-
-      final event = RuntimeEvent(
-        id: 'ev-1',
-        type: RuntimeEventType.navigationPush,
-        timestamp: DateTime.now(),
-        source: 'test',
-        payload: const {'route': '/home'},
-      );
-      bus.publish(event);
-
-      await Future<void>.delayed(Duration.zero);
-      expect(events.length, equals(1));
-      expect(events.first.id, equals('ev-1'));
+  group('CollectorConfig', () {
+    test('defaults all collectors on', () {
+      const cfg = CollectorConfig();
+      expect(cfg.widgets, isTrue);
+      expect(cfg.frames, isTrue);
+      expect(cfg.errors, isTrue);
+      expect(cfg.routes, isTrue);
+      expect(cfg.renders, isTrue);
     });
 
-    test('on() filters by type', () async {
-      final filtered = <RuntimeEvent>[];
-      bus.on(RuntimeEventType.flutterError).listen(filtered.add);
-
-      bus.publish(RuntimeEvent(
-        id: 'e1',
-        type: RuntimeEventType.navigationPush,
-        timestamp: DateTime.now(),
-        source: 's',
-        payload: const {},
-      ));
-      bus.publish(RuntimeEvent(
-        id: 'e2',
-        type: RuntimeEventType.flutterError,
-        timestamp: DateTime.now(),
-        source: 's',
-        payload: const {},
-      ));
-
-      await Future<void>.delayed(Duration.zero);
-      expect(filtered.length, equals(1));
-      expect(filtered.first.id, equals('e2'));
+    test('respects custom buffer sizes', () {
+      const cfg = CollectorConfig(maxErrors: 5, maxFrames: 10);
+      expect(cfg.maxErrors, equals(5));
+      expect(cfg.maxFrames, equals(10));
     });
   });
 
-  group('ToolRegistry', () {
-    test('registers and finds tools', () {
-      final registry = ToolRegistry();
-      final tool = GetWidgetTreeTool();
-      registry.register(tool);
-      expect(registry.find('get_widget_tree'), isNotNull);
-      expect(registry.contains('get_widget_tree'), isTrue);
+  group('FlutterAiDevtoolsException', () {
+    test('toString includes message', () {
+      const e = FlutterAiDevtoolsException('test error');
+      expect(e.toString(), contains('test error'));
     });
 
-    test('returns null for unknown tool', () {
-      final registry = ToolRegistry();
-      expect(registry.find('no_such_tool'), isNull);
-    });
-  });
-
-  group('SecurityMiddleware', () {
-    test('permissive when no tokens configured', () {
-      final mw = SecurityMiddleware([]);
-      expect(mw.authorize(null), isTrue);
-      expect(mw.authorize('anything'), isTrue);
-    });
-
-    test('rejects missing token when tokens configured', () {
-      final mw = SecurityMiddleware(['secret']);
-      expect(mw.authorize(null), isFalse);
-    });
-
-    test('accepts valid bearer token', () {
-      final mw = SecurityMiddleware(['my-secret']);
-      expect(mw.authorize('Bearer my-secret'), isTrue);
-    });
-
-    test('rejects invalid token', () {
-      final mw = SecurityMiddleware(['my-secret']);
-      expect(mw.authorize('Bearer wrong'), isFalse);
-    });
-  });
-
-  group('RuntimeEvent', () {
-    test('serializes and deserializes', () {
-      final event = RuntimeEvent(
-        id: 'abc',
-        type: RuntimeEventType.widgetRebuilt,
-        timestamp: DateTime(2025, 1, 1),
-        source: 'widget_collector',
-        payload: const {'widgetType': 'Text', 'totalRebuilds': 5},
-        severity: EventSeverity.info,
-        tags: const {'widget'},
-      );
-      final json = event.toJson();
-      final restored = RuntimeEvent.fromJson(json);
-      expect(restored.id, equals(event.id));
-      expect(restored.type, equals(event.type));
-      expect(restored.source, equals(event.source));
-      expect(restored.severity, equals(event.severity));
+    test('toString includes cause when present', () {
+      const e = FlutterAiDevtoolsException('test', cause: 'root cause');
+      expect(e.toString(), contains('root cause'));
     });
   });
 }

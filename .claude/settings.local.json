@@ -3,7 +3,8 @@
     "allow": [
       "Bash(dart analyze *)",
       "Bash(dart pub *)",
-      "PowerShell(Stop-Process *)"
+      "PowerShell(Stop-Process *)",
+      "Bash(bash \"C:\\\\Users\\\\HP\\\\.claude\\\\plugins\\\\cache\\\\claude-plugins-official\\\\superpowers\\\\5.1.0\\\\scripts\\\\start-server.sh\" --project-dir \"c:\\\\Users\\\\HP\\\\AndroidStudioProjects\\\\flutter_ai_devtools\")"
     ]
   }
 }
