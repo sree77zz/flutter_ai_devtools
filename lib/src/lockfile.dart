@@ -3,11 +3,15 @@ import 'dart:io';
 
 const _lockfileName = '.dart_tool/flutter_ai_devtools.json';
 
-Future<void> writeLockfile({required int mcpPort}) async {
+Future<void> writeLockfile({int? mcpPort, String? vmServiceUri}) async {
+  // Only desktop platforms can expose a lockfile that the CLI can actually read.
+  // On Android/iOS the filesystem isn't accessible from the host machine.
+  if (!Platform.isLinux && !Platform.isMacOS && !Platform.isWindows) return;
   final file = File(_lockfilePath());
   await file.parent.create(recursive: true);
   await file.writeAsString(jsonEncode({
-    'mcpPort': mcpPort,
+    if (mcpPort != null) 'mcpPort': mcpPort,
+    if (vmServiceUri != null) 'vmServiceUri': vmServiceUri,
     'pid': pid,
     'startedAt': DateTime.now().toIso8601String(),
   }));
