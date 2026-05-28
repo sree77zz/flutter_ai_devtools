@@ -54,7 +54,7 @@ Future<void> main(List<String> args) async {
   });
 
   // Also exit if stdin closes (IDE/runner closed).
-  await stdin.drain<List<int>>();
+  await stdin.drain<void>();
   await bridge.dispose();
   await server.stop();
 }
