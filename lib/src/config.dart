@@ -1,5 +1,3 @@
-enum McpTransport { sse, stdio, none }
-
 class CollectorConfig {
   const CollectorConfig({
     this.widgets = true,
