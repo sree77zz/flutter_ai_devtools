@@ -128,8 +128,15 @@ void _register(
   Map<String, dynamic> Function(Map<String, String> params) handler,
 ) {
   dev.registerExtension('ext.flutter_ai_devtools.$name', (method, params) async {
-    final result = handler(params);
-    return dev.ServiceExtensionResponse.result(jsonEncode(result));
+    try {
+      final result = handler(params);
+      return dev.ServiceExtensionResponse.result(jsonEncode(result));
+    } catch (e) {
+      return dev.ServiceExtensionResponse.error(
+        dev.ServiceExtensionResponse.extensionError,
+        jsonEncode({'error': e.toString()}),
+      );
+    }
   });
 }
 
