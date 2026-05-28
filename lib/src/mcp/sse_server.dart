@@ -4,10 +4,9 @@ import 'dart:io';
 
 import 'package:uuid/uuid.dart';
 
-import 'mcp_server.dart';
 import 'tool_dispatcher.dart';
 
-class SseServer implements McpServer {
+class SseServer {
   SseServer({required this.dispatcher});
 
   final ToolDispatcher dispatcher;
@@ -26,7 +25,6 @@ class SseServer implements McpServer {
     return _server!.port;
   }
 
-  @override
   Future<void> stop() async {
     await _sub?.cancel();
     _sub = null;
