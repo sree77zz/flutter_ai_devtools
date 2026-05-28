@@ -1,8 +1,5 @@
-import 'dart:async';
-
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_ai_devtools/flutter_ai_devtools.dart';
-import 'package:flutter_ai_devtools_mcp/flutter_ai_devtools_mcp.dart';
 
 /// Example demonstrating flutter_ai_devtools integration.
 ///
@@ -11,15 +8,10 @@ import 'package:flutter_ai_devtools_mcp/flutter_ai_devtools_mcp.dart';
 /// "Analyze my app's performance."
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Register the in-process MCP bridge before calling start().
-  InProcessBridge.register();
-
   await FlutterAiDevtools.start(
     port: 8765,
     transport: McpTransport.sse,
   );
-
   runApp(const ExampleApp());
 }
 
@@ -199,7 +191,7 @@ class DetailScreen extends StatelessWidget {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Back'),
+              child: const Text('Back'), 
             ),
           ],
         ),

@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# MCP project-local config (written by `dart run flutter_ai_devtools:setup`)
+.mcp.json
