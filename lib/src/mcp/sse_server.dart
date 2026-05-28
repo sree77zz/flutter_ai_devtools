@@ -4,15 +4,13 @@ import 'dart:io';
 
 import 'package:uuid/uuid.dart';
 
-import '../store/runtime_store.dart';
 import 'mcp_server.dart';
 import 'tool_dispatcher.dart';
 
 class SseServer implements McpServer {
-  SseServer({required this.dispatcher, required this.store});
+  SseServer({required this.dispatcher});
 
   final ToolDispatcher dispatcher;
-  final RuntimeStore store;
   HttpServer? _server;
   StreamSubscription<HttpRequest>? _sub;
   final _sessions = <String, StreamController<String>>{};
