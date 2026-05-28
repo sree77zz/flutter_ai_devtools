@@ -8,10 +8,7 @@ import 'package:flutter_ai_devtools/flutter_ai_devtools.dart';
 /// "Analyze my app's performance."
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await FlutterAiDevtools.start(
-    port: 8765,
-    transport: McpTransport.sse,
-  );
+  await FlutterAiDevtools.start();
   runApp(const ExampleApp());
 }
 
@@ -155,16 +152,17 @@ class _McpInfoCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'MCP Server',
+              'MCP Bridge',
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
-            const Text('SSE → localhost:8765'),
-            const SizedBox(height: 4),
+            const Text('Claude Code → localhost:8765/sse → VM service → app'),
+            const SizedBox(height: 8),
             const Text(
-              'Available tools: get_runtime_summary, get_widget_tree, '
-              'get_current_route, get_recent_errors, get_frame_stats, '
-              'analyze_performance, analyze_rebuilds, get_render_issues',
+              'Start bridge: dart run flutter_ai_devtools:serve\n'
+              'Tools: get_runtime_summary, get_widget_tree, get_current_route,\n'
+              'get_recent_errors, get_frame_stats, analyze_performance,\n'
+              'analyze_rebuilds, get_render_issues',
               style: TextStyle(fontSize: 11, color: Colors.grey),
             ),
           ],
