@@ -1,3 +1,5 @@
+import 'dart:developer' as dev;
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/widgets.dart';
 
@@ -9,11 +11,7 @@ import 'collectors/route_collector.dart';
 import 'collectors/widget_collector.dart';
 import 'config.dart';
 import 'lockfile.dart';
-import 'mcp/mcp_server.dart';
-import 'mcp/sse_server.dart';
-import 'mcp/stdio_server.dart';
-import 'mcp/tool_definitions.dart';
-import 'mcp/tool_dispatcher.dart';
+import 'service_extensions.dart';
 import 'store/runtime_store.dart';
 
 class FlutterAiDevtools {
@@ -22,22 +20,14 @@ class FlutterAiDevtools {
   static RuntimeStore? _store;
   static RouteCollector? _routeCollector;
   static final List<BaseCollector> _collectors = [];
-  static McpServer? _mcpServer;
   static bool _running = false;
 
-  /// A permanent delegating observer that forwards navigation events to the
-  /// current [_routeCollector] (if any). Safe to register with [MaterialApp]
-  /// before [start] is called — it becomes a no-op until [start] initialises
-  /// [_routeCollector], and reverts to a no-op again after [stop].
   static final NavigatorObserver observer = _DelegatingNavigatorObserver();
 
   static RuntimeStore? get store => _store;
 
   static Future<void> start({
-    int port = 8765,
-    McpTransport transport = McpTransport.sse,
     CollectorConfig collectors = const CollectorConfig(),
-    List<Object> extraTools = const [],
   }) async {
     if (_running) await stop();
     _running = true;
@@ -66,50 +56,34 @@ class FlutterAiDevtools {
       _collectors.add(RenderCollector(store: _store!, config: collectors));
     }
 
-    // RenderCollector and ErrorCollector both hook FlutterError.onError, so stop must reverse start order.
     for (final c in _collectors) {
       await c.start();
     }
 
-    if (transport != McpTransport.none) {
-      await _startMcp(port, transport, extraTools);
-    }
+    await _registerExtensions(_store!);
   }
 
   static Future<void> stop() async {
-    // Stop in reverse order to correctly unchain FlutterError handlers.
     for (final c in _collectors.reversed) {
       await c.stop();
     }
     _collectors.clear();
-    await _mcpServer?.stop();
-    _mcpServer = null;
     _routeCollector = null;
     await deleteLockfile();
     _store = null;
     _running = false;
   }
 
-  static Future<void> _startMcp(
-      int port, McpTransport transport, List<Object> extraTools) async {
-    if (kIsWeb) return; // dart:io not available on Flutter Web
-
-    final dispatcher = ToolDispatcher();
-    registerDefaultTools(dispatcher, _store!);
-
-    switch (transport) {
-      case McpTransport.sse:
-        final server = SseServer(dispatcher: dispatcher, store: _store!);
-        await server.bind(port);
-        _mcpServer = server;
-      case McpTransport.stdio:
-        final server = StdioServer(dispatcher: dispatcher);
-        server.start();
-        _mcpServer = server;
-      case McpTransport.none:
-        return;
+  static Future<void> _registerExtensions(RuntimeStore store) async {
+    if (kIsWeb) return;
+    registerServiceExtensions(store);
+    // Write VM URI to lockfile so bin/serve.dart can discover it on desktop.
+    try {
+      final info = await dev.Service.getInfo();
+      await writeLockfile(vmServiceUri: info.serverUri?.toString());
+    } catch (_) {
+      // VM service not available (release mode or unsupported platform).
     }
-    await writeLockfile(mcpPort: port);
   }
 }
 
