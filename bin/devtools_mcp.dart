@@ -243,9 +243,9 @@ Uri? _parseUriOrNull(List<String> args) {
 
 Future<Uri?> _discoverVmServiceUri() async {
   // Check environment variable first — most reliable.
-  final envUri = Platform.environment['FLUTTER_VM_SERVICE_URI'];
+  final envUri = Platform.environment['DART_VM_SERVICE_URI'];
   if (envUri != null && envUri.isNotEmpty) {
-    stderr.writeln('[flutter_ai_devtools] Using FLUTTER_VM_SERVICE_URI: $envUri');
+    stderr.writeln('[flutter_ai_devtools] Using DART_VM_SERVICE_URI: $envUri');
     return Uri.parse(envUri);
   }
 
@@ -266,7 +266,7 @@ Future<Uri?> _discoverVmServiceUri() async {
     'Fix: run your app with a fixed port:\n'
     '  flutter run --vm-service-port 8181\n'
     'Or set the env variable:\n'
-    '  FLUTTER_VM_SERVICE_URI=http://127.0.0.1:<port>/<token>/',
+    '  DART_VM_SERVICE_URI=http://127.0.0.1:<port>/<token>/',
   );
   return null;
 }

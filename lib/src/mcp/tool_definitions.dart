@@ -6,12 +6,6 @@ void registerBridgeTools(ToolDispatcher d, VmBridge bridge) {
     'get_runtime_summary',
     (args) => bridge.callTool('get_runtime_summary', args),
     description: 'Complete runtime health snapshot',
-    schema: {
-      'type': 'object',
-      'properties': {
-        'includeInternalMetrics': {'type': 'boolean', 'default': false},
-      },
-    },
   );
 
   d.register(
@@ -22,7 +16,6 @@ void registerBridgeTools(ToolDispatcher d, VmBridge bridge) {
       'type': 'object',
       'properties': {
         'maxDepth': {'type': 'integer', 'default': 10},
-        'includeRenderBounds': {'type': 'boolean', 'default': true},
       },
     },
   );

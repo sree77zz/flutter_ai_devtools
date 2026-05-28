@@ -20,7 +20,6 @@ void registerDefaultTools(ToolDispatcher d, RuntimeStore store) {
       'type': 'object',
       'properties': {
         'maxDepth': {'type': 'integer', 'default': 10},
-        'includeRenderBounds': {'type': 'boolean', 'default': true},
       },
     },
   );
@@ -155,10 +154,6 @@ void registerDefaultTools(ToolDispatcher d, RuntimeStore store) {
       };
     },
     description: 'Complete runtime health snapshot',
-    schema: {
-      'type': 'object',
-      'properties': {'includeInternalMetrics': {'type': 'boolean', 'default': false}},
-    },
   );
 }
 
