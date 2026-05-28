@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/widgets.dart';
 
 import 'collectors/base_collector.dart';
@@ -8,6 +9,11 @@ import 'collectors/route_collector.dart';
 import 'collectors/widget_collector.dart';
 import 'config.dart';
 import 'lockfile.dart';
+import 'mcp/mcp_server.dart';
+import 'mcp/sse_server.dart';
+import 'mcp/stdio_server.dart';
+import 'mcp/tool_definitions.dart';
+import 'mcp/tool_dispatcher.dart';
 import 'store/runtime_store.dart';
 
 class FlutterAiDevtools {
@@ -16,7 +22,7 @@ class FlutterAiDevtools {
   static RuntimeStore? _store;
   static RouteCollector? _routeCollector;
   static final List<BaseCollector> _collectors = [];
-  static dynamic _mcpServer;
+  static McpServer? _mcpServer;
   static bool _running = false;
 
   /// A permanent delegating observer that forwards navigation events to the
@@ -65,9 +71,8 @@ class FlutterAiDevtools {
       await c.start();
     }
 
-    if (transport != McpTransport.none && _mcpStarter != null) {
-      _mcpServer = await _mcpStarter!(port, transport, _store!, extraTools);
-      await writeLockfile(mcpPort: port);
+    if (transport != McpTransport.none) {
+      await _startMcp(port, transport, extraTools);
     }
   }
 
@@ -77,7 +82,7 @@ class FlutterAiDevtools {
       await c.stop();
     }
     _collectors.clear();
-    await (_mcpServer as dynamic)?.stop();
+    await _mcpServer?.stop();
     _mcpServer = null;
     _routeCollector = null;
     await deleteLockfile();
@@ -85,18 +90,26 @@ class FlutterAiDevtools {
     _running = false;
   }
 
-  static Future<Object> Function(
-    int port,
-    McpTransport transport,
-    RuntimeStore store,
-    List<Object> extraTools,
-  )? _mcpStarter;
+  static Future<void> _startMcp(
+      int port, McpTransport transport, List<Object> extraTools) async {
+    if (kIsWeb) return; // dart:io not available on Flutter Web
 
-  static void registerMcpStarter(
-    Future<Object> Function(int, McpTransport, RuntimeStore, List<Object>)
-        starter,
-  ) {
-    _mcpStarter = starter;
+    final dispatcher = ToolDispatcher();
+    registerDefaultTools(dispatcher, _store!);
+
+    switch (transport) {
+      case McpTransport.sse:
+        final server = SseServer(dispatcher: dispatcher, store: _store!);
+        await server.bind(port);
+        _mcpServer = server;
+      case McpTransport.stdio:
+        final server = StdioServer(dispatcher: dispatcher);
+        server.start();
+        _mcpServer = server;
+      case McpTransport.none:
+        return;
+    }
+    await writeLockfile(mcpPort: port);
   }
 }
 
