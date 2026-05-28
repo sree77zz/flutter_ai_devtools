@@ -29,6 +29,7 @@ dev_dependencies:
 executables:
   devtools_mcp: devtools_mcp
   setup: setup
+  serve: serve
 
 flutter:
   uses-material-design: false
