@@ -2,43 +2,24 @@
 import 'dart:convert';
 import 'dart:io';
 
-const _defaultMcpPort = 8765;
-const _defaultVmPort = 8181;
-
 Future<void> main(List<String> args) async {
-  final mcpPort = _argInt(args, '--port') ?? _defaultMcpPort;
-
-  await _writeMcpJson(mcpPort);
+  await _writeMcpJson();
   await _writeVsCodeLaunch();
-
-  stdout.writeln('');
-  stdout.writeln('Setup complete!');
-  stdout.writeln('');
-  stdout.writeln('Add one line to your main():');
-  stdout.writeln('  await FlutterAiDevtools.start();');
-  stdout.writeln('');
-  stdout.writeln('Then, two terminals when developing:');
-  stdout.writeln(
-      '  Terminal 1: Use the "Flutter + AI DevTools" VS Code launch config');
-  stdout.writeln(
-      '               OR: flutter run --vm-service-port=$_defaultVmPort --disable-service-auth-codes');
-  stdout.writeln('  Terminal 2: dart run flutter_ai_devtools:serve');
-  stdout.writeln('');
-  stdout.writeln(
-      'In Claude Code: /mcp → flutter_ai_devtools should show connected.');
+  _printInstructions();
 }
 
-Future<void> _writeMcpJson(int mcpPort) async {
-  final config = {
+Future<void> _writeMcpJson() async {
+  const config = {
     'mcpServers': {
       'flutter_ai_devtools': {
-        'type': 'sse',
-        'url': 'http://localhost:$mcpPort/sse',
+        'type': 'stdio',
+        'command': 'dart',
+        'args': ['run', 'flutter_ai_devtools:devtools_mcp'],
       },
     },
   };
-  final mcpFile = File('.mcp.json');
-  if (await mcpFile.exists()) {
+  final file = File('.mcp.json');
+  if (await file.exists()) {
     stdout.write('.mcp.json already exists. Overwrite? [y/N] ');
     final answer = stdin.readLineSync()?.toLowerCase() ?? 'n';
     if (answer != 'y') {
@@ -46,16 +27,15 @@ Future<void> _writeMcpJson(int mcpPort) async {
       return;
     }
   }
-  await _writeJson(mcpFile, config);
-  stdout.writeln('✓ Created .mcp.json');
+  await file.writeAsString(
+      '${const JsonEncoder.withIndent('  ').convert(config)}\n');
+  stdout.writeln('✓ Created .mcp.json (stdio transport — no second terminal needed)');
 }
 
 Future<void> _writeVsCodeLaunch() async {
-  final dir = Directory('.vscode');
-  if (!await dir.exists()) await dir.create();
-
-  final launchFile = File('.vscode/launch.json');
-  final config = {
+  await Directory('.vscode').create(recursive: true);
+  final file = File('.vscode/launch.json');
+  const config = {
     'version': '0.2.0',
     'configurations': [
       {
@@ -63,14 +43,13 @@ Future<void> _writeVsCodeLaunch() async {
         'request': 'launch',
         'type': 'dart',
         'args': [
-          '--vm-service-port=$_defaultVmPort',
+          '--vm-service-port=8181',
           '--disable-service-auth-codes',
         ],
       },
     ],
   };
-
-  if (await launchFile.exists()) {
+  if (await file.exists()) {
     stdout.write('.vscode/launch.json already exists. Overwrite? [y/N] ');
     final answer = stdin.readLineSync()?.toLowerCase() ?? 'n';
     if (answer != 'y') {
@@ -78,18 +57,24 @@ Future<void> _writeVsCodeLaunch() async {
       return;
     }
   }
-  await _writeJson(launchFile, config);
-  stdout.writeln('✓ Created .vscode/launch.json (launch config with fixed VM port)');
-}
-
-Future<void> _writeJson(File file, Object data) async {
   await file.writeAsString(
-    '${const JsonEncoder.withIndent('  ').convert(data)}\n',
-  );
+      '${const JsonEncoder.withIndent('  ').convert(config)}\n');
+  stdout.writeln('✓ Created .vscode/launch.json');
 }
 
-int? _argInt(List<String> args, String flag) {
-  final idx = args.indexOf(flag);
-  if (idx != -1 && idx + 1 < args.length) return int.tryParse(args[idx + 1]);
-  return null;
+void _printInstructions() {
+  stdout.writeln('''
+
+Setup complete!
+
+1. Add to your main():
+     await FlutterAiDevtools.start();
+
+2. Run your Flutter app:
+     flutter run --vm-service-port=8181 --disable-service-auth-codes
+   or use the "Flutter + AI DevTools" VS Code launch config.
+
+3. In Claude Code, run /mcp — flutter_ai_devtools should show connected.
+   Claude Code starts the MCP bridge automatically; no second terminal needed.
+''');
 }
