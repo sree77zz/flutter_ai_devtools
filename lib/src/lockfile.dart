@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-const _lockfileName = '.dart_tool/flutter_ai_devtools.json';
 
 Future<void> writeLockfile({int? mcpPort, String? vmServiceUri}) async {
   // Only desktop platforms can expose a lockfile that the CLI can actually read.
@@ -54,4 +53,4 @@ bool isProcessAlive(int targetPid) {
 }
 
 String _lockfilePath() =>
-    '${Directory.current.path}${Platform.pathSeparator}$_lockfileName';
+    '${Directory.systemTemp.path}${Platform.pathSeparator}flutter_ai_devtools.json';

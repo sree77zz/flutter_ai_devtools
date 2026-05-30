@@ -71,8 +71,8 @@ Setup complete!
      await FlutterAiDevtools.start();
 
 2. Run your Flutter app:
-     flutter run --vm-service-port=8181 --disable-service-auth-codes
-   or use the "Flutter + AI DevTools" VS Code launch config.
+     flutter run
+   The bridge finds the VM service automatically via lockfile.
 
 3. In Claude Code, run /mcp — flutter_ai_devtools should show connected.
    Claude Code starts the MCP bridge automatically; no second terminal needed.

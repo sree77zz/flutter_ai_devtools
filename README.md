@@ -49,10 +49,10 @@ This writes `.mcp.json` (stdio transport) and `.vscode/launch.json` (fixed VM po
 **4. Run your app**
 
 ```
-flutter run --vm-service-port=8181 --disable-service-auth-codes
+flutter run
 ```
 
-Or use the "Flutter + AI DevTools" VS Code launch config.
+That's it. The bridge discovers the VM service URI automatically via a temp-directory lockfile written by `FlutterAiDevtools.start()`.
 
 **5. Connect in Claude Code**
 
@@ -82,7 +82,7 @@ Run `/mcp` — `flutter_ai_devtools` should show connected. No second terminal n
 
 - Flutter 3.x+, Dart 3.3+
 - Claude Code with MCP support
-- App must be running with `--vm-service-port=8181 --disable-service-auth-codes`
+- App must be running in debug mode (`flutter run`) — release mode disables the VM service
 
 ## SSE transport (alternative)
 
