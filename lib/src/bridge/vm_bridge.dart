@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:vm_service/vm_service.dart';
 import 'package:vm_service/vm_service_io.dart';
 import '../lockfile.dart';
@@ -8,12 +7,22 @@ class VmBridge {
   VmService? _service;
   String? _mainIsolateId;
 
-  /// Connect to the Dart VM service at [vmUri].
-  /// If [vmUri] is null, falls back to: lockfile → DART_VM_SERVICE_URI env → localhost:8181.
+  /// Connect to the Dart VM service.
+  ///
+  /// If [vmUri] is supplied, connects directly to that URI.
+  /// Otherwise tries each candidate in order: lockfile → DART_VM_SERVICE_URI
+  /// env var → fixed port 8181.  A stale lockfile URI (dead process) is
+  /// skipped automatically.
   Future<bool> connect([String? vmUri]) async {
-    final uri = vmUri ?? await _resolveUri();
-    if (uri == null) return false;
+    if (vmUri != null) return _connectTo(vmUri);
 
+    for (final uri in await _candidateUris()) {
+      if (await _connectTo(uri)) return true;
+    }
+    return false;
+  }
+
+  Future<bool> _connectTo(String uri) async {
     try {
       final normalized = uri.endsWith('/') ? uri : '$uri/';
       final wsBase = normalized
@@ -24,7 +33,7 @@ class VmBridge {
       final vm = await _service!.getVM();
       final isolates = vm.isolates;
       if (isolates == null || isolates.isEmpty) {
-        stderr.writeln('[VmBridge] No isolates found');
+        stderr.writeln('[VmBridge] No isolates found at $uri');
         _service = null;
         return false;
       }
@@ -49,8 +58,9 @@ class VmBridge {
         isolateId: _mainIsolateId,
         args: args.map((k, v) => MapEntry(k, v.toString())),
       );
-      return jsonDecode(response.json?['result'] as String? ?? '{}')
-          as Map<String, dynamic>;
+      // response.json IS the decoded data map the extension returned.
+      // There is no nested 'result' string field.
+      return response.json ?? {};
     } catch (e) {
       return {'error': e.toString()};
     }
@@ -62,17 +72,29 @@ class VmBridge {
     _mainIsolateId = null;
   }
 
-  static Future<String?> _resolveUri() async {
-    // 1. Lockfile (works on desktop where the app can write it)
+  static Future<List<String>> _candidateUris() async {
+    final candidates = <String>[];
+
+    // 1. Lockfile (written by the Flutter app on desktop).
+    //    Skip if the app process is no longer alive (stale entry).
     final lockData = await readLockfile();
-    final lockUri = lockData?['vmServiceUri'] as String?;
-    if (lockUri != null) return lockUri;
+    if (lockData != null) {
+      final lockUri = lockData['vmServiceUri'] as String?;
+      final lockPid = lockData['pid'] as int?;
+      if (lockUri != null &&
+          (lockPid == null || isProcessAlive(lockPid))) {
+        candidates.add(lockUri);
+      }
+    }
 
-    // 2. Environment variable (set manually or by wrapper scripts)
+    // 2. Environment variable (manual override or wrapper scripts).
     final envUri = Platform.environment['DART_VM_SERVICE_URI'];
-    if (envUri != null) return envUri;
+    if (envUri != null) candidates.add(envUri);
 
-    // 3. Fixed port (used when flutter run --vm-service-port=8181 --disable-service-auth-codes)
-    return 'http://localhost:8181/';
+    // 3. Fixed port — works when flutter run uses
+    //    --vm-service-port=8181 --disable-service-auth-codes.
+    candidates.add('http://localhost:8181/');
+
+    return candidates;
   }
 }
