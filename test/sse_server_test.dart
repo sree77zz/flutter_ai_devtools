@@ -106,15 +106,26 @@ void main() {
       final sseReq = await client.get('localhost', port, '/sse');
       final sseRes = await sseReq.close();
 
-      String? messageUrl;
-      await for (final line in sseRes
+      // Use broadcast stream so we can extract the URL and then listen for events.
+      final lineStream = sseRes
           .transform(utf8.decoder)
-          .transform(const LineSplitter())) {
+          .transform(const LineSplitter())
+          .asBroadcastStream();
+
+      String? messageUrl;
+      await for (final line in lineStream) {
         if (line.startsWith('data: ')) {
           messageUrl = line.substring('data: '.length).trim();
           break;
         }
       }
+      expect(messageUrl, isNotNull);
+
+      // Listen for any further SSE data lines after the POST.
+      final extraEvents = <String>[];
+      final sub = lineStream
+          .where((l) => l.startsWith('data: '))
+          .listen(extraEvents.add);
 
       final uri = Uri.parse('http://localhost:$port$messageUrl');
       final postReq = await client.postUrl(uri);
@@ -128,6 +139,11 @@ void main() {
       final postRes = await postReq.close();
       expect(postRes.statusCode, 202);
 
+      // Wait briefly — no SSE event should arrive for a notification.
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      expect(extraEvents, isEmpty);
+
+      await sub.cancel();
       client.close(force: true);
     });
 
