@@ -1,5 +1,4 @@
 // bin/devtools_mcp.dart
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -13,9 +12,6 @@ Future<void> main(List<String> args) async {
   final bridge = VmBridge();
   final dispatcher = ToolDispatcher();
   registerBridgeTools(dispatcher, bridge);
-
-  // Try to connect immediately; retry lazily when tools are called if this fails.
-  unawaited(bridge.connect(vmUri));
 
   await _serveStdio(bridge, dispatcher, vmUri);
 }
@@ -39,7 +35,7 @@ Future<void> _serveStdio(
     final method = req['method'] as String?;
     final params = req['params'] as Map<String, dynamic>? ?? {};
 
-    // Notifications have no id — no response.
+    // Notifications have no 'id' key. Messages with id:null are treated as requests.
     if (!req.containsKey('id')) continue;
 
     try {

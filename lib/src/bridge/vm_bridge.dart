@@ -14,6 +14,7 @@ class VmBridge {
   /// env var → fixed port 8181.  A stale lockfile URI (dead process) is
   /// skipped automatically.
   Future<bool> connect([String? vmUri]) async {
+    if (_service != null && _mainIsolateId != null) return true;
     if (vmUri != null) return _connectTo(vmUri);
 
     for (final uri in await _candidateUris()) {
