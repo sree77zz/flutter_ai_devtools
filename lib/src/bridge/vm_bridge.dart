@@ -36,6 +36,7 @@ class VmBridge {
       if (isolates == null || isolates.isEmpty) {
         stderr.writeln('[VmBridge] No isolates found at $uri');
         _service = null;
+        _mainIsolateId = null;
         return false;
       }
       _mainIsolateId = isolates.first.id;
@@ -44,6 +45,7 @@ class VmBridge {
     } catch (e) {
       stderr.writeln('[VmBridge] Connection failed: $e');
       _service = null;
+      _mainIsolateId = null;
       return false;
     }
   }
