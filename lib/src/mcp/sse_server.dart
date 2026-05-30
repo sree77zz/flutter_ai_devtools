@@ -39,7 +39,7 @@ class SseServer {
   void _handle(HttpRequest req) {
     if (req.method == 'GET' && req.uri.path == '/sse') {
       _handleSse(req);
-    } else if (req.method == 'POST') {
+    } else if (req.method == 'POST' && req.uri.path == '/message') {
       _handlePost(req);
     } else if (req.method == 'GET' && req.uri.path == '/health') {
       req.response.statusCode = 200;
@@ -65,7 +65,9 @@ class SseServer {
       req.response.headers.add('Connection', 'keep-alive');
       req.response.headers.add('Access-Control-Allow-Origin', '*');
 
-      req.response.write('event: endpoint\ndata: /\n\n');
+      // Tell the client where to POST messages (MCP SSE transport spec).
+      req.response.write(
+          'event: endpoint\ndata: /message?sessionId=$sessionId\n\n');
 
       // Close the controller when the client disconnects.
       unawaited(req.response.done.then((_) {
@@ -92,16 +94,28 @@ class SseServer {
 
   Future<void> _handlePost(HttpRequest req) async {
     req.response.headers.add('Access-Control-Allow-Origin', '*');
-    final body = await req
-        .cast<List<int>>()
-        .transform(utf8.decoder)
-        .join();
+
+    // Route to the correct SSE session.
+    final sessionId = req.uri.queryParameters['sessionId'];
+    // ignore: close_sinks — controller lifecycle is owned by _handleSse
+    final controller = sessionId != null
+        ? _sessions[sessionId]
+        : (_sessions.isNotEmpty ? _sessions.values.first : null);
+
+    if (controller == null || controller.isClosed) {
+      req.response.statusCode = 404;
+      req.response.write('No SSE session');
+      await req.response.close();
+      return;
+    }
+
+    final body =
+        await req.cast<List<int>>().transform(utf8.decoder).join();
     Map<String, dynamic> rpc;
     try {
       rpc = jsonDecode(body) as Map<String, dynamic>;
     } catch (_) {
       req.response.statusCode = 400;
-      req.response.write(jsonEncode(_error(null, -32700, 'Parse error')));
       await req.response.close();
       return;
     }
@@ -110,19 +124,22 @@ class SseServer {
     final method = rpc['method'] as String?;
     final params = rpc['params'] as Map<String, dynamic>? ?? {};
 
+    // Notifications have no id — no response is sent.
+    if (!rpc.containsKey('id')) {
+      req.response.statusCode = 202;
+      await req.response.close();
+      return;
+    }
+
+    // Responses go through the SSE stream, not the POST body.
     try {
       final result = await _dispatch(method, params);
-      req.response.statusCode = 200;
-      req.response.headers.contentType = ContentType.json;
-      req.response.write(
-          jsonEncode({'jsonrpc': '2.0', 'id': id, 'result': result}));
-      await req.response.close();
+      controller.add(jsonEncode({'jsonrpc': '2.0', 'id': id, 'result': result}));
     } catch (e) {
-      req.response.statusCode = 200;
-      req.response.headers.contentType = ContentType.json;
-      req.response.write(jsonEncode(_error(id, -32603, e.toString())));
-      await req.response.close();
+      controller.add(jsonEncode(_error(id, -32603, e.toString())));
     }
+    req.response.statusCode = 202;
+    await req.response.close();
   }
 
   Future<Map<String, dynamic>> _dispatch(
@@ -134,8 +151,6 @@ class SseServer {
           'capabilities': {'tools': {}},
           'serverInfo': {'name': 'flutter_ai_devtools', 'version': '0.1.0'},
         };
-      case 'initialized':
-        return {};
       case 'tools/list':
         return {'tools': dispatcher.toolManifests};
       case 'tools/call':

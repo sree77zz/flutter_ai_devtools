@@ -93,13 +93,6 @@ packages:
       relative: true
     source: path
     version: "0.1.0"
-  flutter_ai_devtools_mcp:
-    dependency: "direct main"
-    description:
-      path: "../cli"
-      relative: true
-    source: path
-    version: "0.1.0"
   flutter_lints:
     dependency: "direct dev"
     description:

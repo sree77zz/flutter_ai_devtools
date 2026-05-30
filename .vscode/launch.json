@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter + AI DevTools",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "--vm-service-port=8181",
+        "--disable-service-auth-codes"
+      ]
+    }
+  ]
+}

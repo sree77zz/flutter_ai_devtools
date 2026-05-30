@@ -36,6 +36,9 @@ class StdioServer {
     final method = rpc['method'] as String?;
     final params = rpc['params'] as Map<String, dynamic>? ?? {};
 
+    // Notifications have no id — send no response.
+    if (!rpc.containsKey('id')) return;
+
     try {
       final result = await _dispatch(method, params);
       _write({'jsonrpc': '2.0', 'id': id, 'result': result});
@@ -53,8 +56,6 @@ class StdioServer {
           'capabilities': {'tools': {}},
           'serverInfo': {'name': 'flutter_ai_devtools', 'version': '0.1.0'},
         };
-      case 'initialized':
-        return {};
       case 'tools/list':
         return {'tools': dispatcher.toolManifests};
       case 'tools/call':
