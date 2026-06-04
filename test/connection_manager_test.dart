@@ -9,6 +9,7 @@ class FakeSession implements VmSession {
   final _disconnect = StreamController<void>.broadcast();
   bool disposed = false;
   void killApp() => _disconnect.add(null);
+  void killWithError() => _disconnect.addError(StateError('stream error'));
 
   @override
   String get endpoint => 'ws://fake/ws';
@@ -92,6 +93,46 @@ void main() {
       expect(sessions.first.disposed, isTrue,
           reason: 'old session must be disposed after disconnect');
       expect(sessions.length, greaterThanOrEqualTo(2)); // reconnected
+      await mgr.dispose();
+    });
+
+    test('survives a throwing connector and connects on a later attempt', () async {
+      var calls = 0;
+      final mgr = ConnectionManager(
+        candidates: () async => ['ws://x/ws'],
+        connector: (_) async {
+          calls++;
+          if (calls < 3) throw StateError('transient socket error');
+          return FakeSession();
+        },
+        retryDelay: const Duration(milliseconds: 5),
+      );
+      mgr.start();
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+      expect(mgr.status.connected, isTrue,
+          reason: 'loop must survive throwing connector and eventually connect');
+      await mgr.dispose();
+    });
+
+    test('treats an error on the disconnect stream as a disconnect', () async {
+      final sessions = <FakeSession>[];
+      final mgr = ConnectionManager(
+        candidates: () async => ['ws://x/ws'],
+        connector: (_) async {
+          final s = FakeSession();
+          sessions.add(s);
+          return s;
+        },
+        retryDelay: const Duration(milliseconds: 5),
+      );
+      mgr.start();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(mgr.status.connected, isTrue);
+      sessions.first.killWithError();
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      expect(mgr.status.connected, isTrue);
+      expect(sessions.length, greaterThanOrEqualTo(2),
+          reason: 'a disconnect-stream error must trigger reconnect');
       await mgr.dispose();
     });
   });

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:vm_service/vm_service.dart' as vm;
 import 'package:vm_service/vm_service_io.dart';
@@ -75,13 +76,36 @@ Future<VmSession?> connectVmService(String wsUri) async {
 }
 
 class VmServiceSession implements VmSession {
-  VmServiceSession(this._service, this.endpoint, this.mainIsolateId);
+  VmServiceSession(this._service, this.endpoint, this.mainIsolateId) {
+    // A disconnect is signalled on isolate exit / hot restart OR when the
+    // underlying VM service connection closes (app process death / Ctrl-C /
+    // websocket drop). The latter is the COMMON case and does NOT surface as a
+    // kIsolateExit event — VmService.dispose() completes onDone without one.
+    _isolateExitSub = _service.onIsolateEvent
+        .where((e) => e.kind == vm.EventKind.kIsolateExit)
+        .listen((_) => _signalDisconnected(),
+            onError: (_) => _signalDisconnected());
+    _service.onDone
+        .then((_) => _signalDisconnected())
+        .catchError((_) => _signalDisconnected());
+  }
 
   final vm.VmService _service;
   @override
   final String endpoint;
   @override
   final String mainIsolateId;
+
+  final StreamController<void> _disconnectController =
+      StreamController<void>.broadcast();
+  StreamSubscription<vm.Event>? _isolateExitSub;
+  bool _disconnectSignalled = false;
+
+  void _signalDisconnected() {
+    if (_disconnectSignalled) return;
+    _disconnectSignalled = true;
+    if (!_disconnectController.isClosed) _disconnectController.add(null);
+  }
 
   @override
   Stream<vm.Event> get stdout => _service.onStdoutEvent;
@@ -91,9 +115,7 @@ class VmServiceSession implements VmSession {
   Stream<vm.Event> get logging => _service.onLoggingEvent;
 
   @override
-  Stream<void> get disconnected => _service.onIsolateEvent
-      .where((e) => e.kind == vm.EventKind.kIsolateExit)
-      .map((_) {});
+  Stream<void> get disconnected => _disconnectController.stream;
 
   @override
   Future<Map<String, dynamic>> callExtension(
@@ -123,6 +145,9 @@ class VmServiceSession implements VmSession {
 
   @override
   Future<void> dispose() async {
+    _disconnectSignalled = true;
+    await _isolateExitSub?.cancel();
+    if (!_disconnectController.isClosed) await _disconnectController.close();
     await _service.dispose();
   }
 }

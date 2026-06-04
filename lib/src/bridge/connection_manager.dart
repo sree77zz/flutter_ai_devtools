@@ -39,15 +39,14 @@ class ConnectionManager {
 
   Future<void> _loop() async {
     while (_running) {
-      if (_session == null) {
-        await _tryConnectOnce();
+      try {
+        if (_session == null) {
+          await _tryConnectOnce();
+        }
+      } catch (e) {
+        _status = ConnectionStatus(connected: false, lastError: e.toString());
       }
-      if (_session == null) {
-        await Future<void>.delayed(retryDelay);
-      } else {
-        // Still connected; poll again after retryDelay.
-        await Future<void>.delayed(retryDelay);
-      }
+      await Future<void>.delayed(retryDelay);
     }
     _loopDone?.complete();
   }
@@ -70,7 +69,10 @@ class ConnectionManager {
             isolateId: s.mainIsolateId,
             connectedAt: DateTime.now(),
           );
-          _disconnectSub = s.disconnected.listen((_) => _onDisconnect());
+          _disconnectSub = s.disconnected.listen(
+            (_) => _onDisconnect(),
+            onError: (_) => _onDisconnect(),
+          );
           return;
         }
       } catch (e) {
