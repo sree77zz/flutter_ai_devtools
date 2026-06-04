@@ -7,20 +7,18 @@ import 'package:flutter_ai_devtools/src/mcp/tool_definitions.dart';
 import 'package:flutter_ai_devtools/src/mcp/tool_dispatcher.dart';
 
 Future<void> main(List<String> args) async {
-  final vmUri = _argString(args, '--vm-uri');
-
   final bridge = VmBridge();
+  bridge.start(); // resilient connect loop; never blocks, never dies.
+
   final dispatcher = ToolDispatcher();
   registerBridgeTools(dispatcher, bridge);
 
-  await _serveStdio(bridge, dispatcher, vmUri);
+  await _serveStdio(dispatcher);
+  await bridge.dispose();
 }
 
-Future<void> _serveStdio(
-    VmBridge bridge, ToolDispatcher dispatcher, String? vmUri) async {
-  final lines =
-      stdin.transform(utf8.decoder).transform(const LineSplitter());
-
+Future<void> _serveStdio(ToolDispatcher dispatcher) async {
+  final lines = stdin.transform(utf8.decoder).transform(const LineSplitter());
   await for (final line in lines) {
     if (line.trim().isEmpty) continue;
     Map<String, dynamic> req;
@@ -30,19 +28,16 @@ Future<void> _serveStdio(
       _write(_error(null, -32700, 'Parse error'));
       continue;
     }
+    if (!req.containsKey('id')) continue; // notification
 
     final id = req['id'];
     final method = req['method'] as String?;
     final params = req['params'] as Map<String, dynamic>? ?? {};
-
-    // Notifications have no 'id' key. Messages with id:null are treated as requests.
-    if (!req.containsKey('id')) continue;
-
     try {
-      final result = await _dispatch(method, params, bridge, dispatcher, vmUri);
+      final result = await _dispatch(method, params, dispatcher);
       _write({'jsonrpc': '2.0', 'id': id, 'result': result});
     } catch (e) {
-      _write(_error(id, -32603, e.toString()));
+      _write(_error(id, _codeForError(e), e.toString()));
     }
   }
 }
@@ -50,9 +45,7 @@ Future<void> _serveStdio(
 Future<Object?> _dispatch(
   String? method,
   Map<String, dynamic> params,
-  VmBridge bridge,
   ToolDispatcher dispatcher,
-  String? vmUri,
 ) async {
   switch (method) {
     case 'initialize':
@@ -68,12 +61,6 @@ Future<Object?> _dispatch(
     case 'tools/call':
       final name = params['name'] as String?;
       if (name == null) throw const FormatException('"name" is required');
-      // Ensure connected before calling — lazy connect with one retry burst.
-      if (!await bridge.connect(vmUri)) {
-        return ToolDispatcher.mcpError(
-            'Flutter app not connected. Run: flutter run '
-            '--vm-service-port=8181 --disable-service-auth-codes');
-      }
       final toolArgs = params['arguments'] as Map<String, dynamic>? ?? {};
       final content = await dispatcher.dispatch(name, toolArgs);
       return ToolDispatcher.mcpResult(content);
@@ -86,18 +73,18 @@ Future<Object?> _dispatch(
 
 void _write(Map<String, dynamic> msg) => stdout.writeln(jsonEncode(msg));
 
+/// Maps an unknown method or tool name to JSON-RPC -32601 (Method Not Found);
+/// everything else is -32603 (Internal Error).
+int _codeForError(Object e) {
+  if (e is ToolNotFoundException) return -32601;
+  if (e is FormatException && e.message.startsWith('Method not found')) {
+    return -32601;
+  }
+  return -32603;
+}
+
 Map<String, dynamic> _error(dynamic id, int code, String message) => {
       'jsonrpc': '2.0',
       if (id != null) 'id': id,
       'error': {'code': code, 'message': message},
     };
-
-String? _argString(List<String> args, String flag) {
-  final idx = args.indexOf(flag);
-  if (idx != -1 && idx + 1 < args.length) return args[idx + 1];
-  final prefix = '$flag=';
-  for (final a in args) {
-    if (a.startsWith(prefix)) return a.substring(prefix.length);
-  }
-  return null;
-}
