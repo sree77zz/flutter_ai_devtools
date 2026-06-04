@@ -39,6 +39,15 @@ across both **desktop** and **Android/iOS** targets.
 | Route tracking | **Observer-free auto-detect** from the live element tree; observer becomes optional enrichment |
 | "Live" model | **Always-fresh on pull**: bridge ingests continuously in the background; tools return an up-to-the-millisecond tail via a cursor |
 | Capture architecture | **Hybrid**: app-side structured collectors + bridge-side VM-stream ingestion, merged in a `LiveBuffer` |
+| Handled-error capture | Opt-in `FlutterAiDevtools.reportError()` / `reportIssue()` to surface caught API/business errors that are neither logged nor rethrown |
+
+### Capture boundary (what "all issues" means)
+
+A tool can only surface an error that is **thrown uncaught**, **logged/printed**, or
+**explicitly reported**. An error that is `catch`-handled and silently swallowed is
+invisible to every observability tool — `reportError()` exists precisely to close that
+gap. After this rework Claude reads all such signals **directly from the running app**
+with no copy-paste; the developer never opens or pastes a log.
 
 ---
 
@@ -175,13 +184,15 @@ Issue {
   String id;                 // stable per signature
   IssueCategory category;    // console | layoutRender | lifecycleState
   IssueSeverity severity;    // info | warning | error | critical
+  String source;             // detected | reported
   String signature;          // dedup key
+  String? domainCategory;    // free-form tag from reportError/reportIssue (e.g. 'api')
   String title;
   String detail;
   DateTime firstSeen;
   DateTime lastSeen;
   int count;                 // aggregated occurrences
-  Evidence evidence;         // { widget?, size?, stack?, logSeq }
+  Evidence evidence;         // { widget?, size?, stack?, logSeq, context? }
 }
 ```
 
@@ -216,6 +227,36 @@ Issues are **deduplicated and aggregated** by signature, so Claude sees
   converting log noise into a single high-signal finding.
 - **Out of scope:** general memory-leak detection without a Flutter-emitted signal. We
   detect the *symptoms* Flutter surfaces (disposed-use assertions), not arbitrary leaks.
+
+### 3.5 Explicit developer-reported issues (`reportError` / `reportIssue`)
+
+A public app-side API for surfacing **handled** errors that would otherwise be invisible
+(caught API/business-logic failures that are neither logged nor rethrown):
+
+```dart
+try {
+  await api.charge(order);
+} catch (e, st) {
+  FlutterAiDevtools.reportError(
+    e, st,
+    category: 'api',                       // free-form domain tag
+    context: {'orderId': order.id},        // structured evidence
+  );
+}
+
+// Non-exception conditions (validation failures, invariant breaks):
+FlutterAiDevtools.reportIssue(
+  'Cart total mismatch',
+  severity: IssueSeverity.error,
+  context: {'expected': 1200, 'actual': 1150},
+);
+```
+
+- No-ops when devtools is not started, so calls are safe to leave in code paths.
+- Routed through the **same `Issue` pipeline** (signature dedup, severity, aggregation)
+  and broadcast via `postEvent`, so reported items appear in `get_issues` alongside
+  detected ones, tagged `source: 'reported'`.
+- `category` is preserved verbatim; reported issues are filterable by it.
 
 Served by `get_issues(category?, severity?, sinceSeq?)`.
 
@@ -264,6 +305,19 @@ periodic snapshot, so it works with `MaterialApp.routes`, `MaterialApp.router`,
 **Folded for backward compatibility:** `get_recent_errors` and `get_render_issues`
 become thin filtered views over `get_issues` (kept as aliases — nothing breaks).
 
+**App-side public API additions** (not MCP tools — they feed `get_issues`):
+`FlutterAiDevtools.reportError(error, stack, {category, context})` and
+`FlutterAiDevtools.reportIssue(title, {severity, category, context})` (Section 3.5),
+plus the `IssueSeverity` enum exported for callers.
+
+### 5.1 Continuous monitoring usage
+
+Claude Code is pull-based, so "monitor my app" is realized as a **watch task**: the
+developer asks once (*"watch the app and flag anything that breaks"*), and Claude polls
+`get_logs(sinceSeq)` / `get_issues(sinceSeq)` on a cadence within that running task,
+advancing the cursor so it only sees what is new. No background push and no unprompted
+interruption are promised — those are outside any current MCP client's model.
+
 ---
 
 ## Section 6 — Consolidation & Cleanup
@@ -285,6 +339,9 @@ become thin filtered views over `get_issues` (kept as aliases — nothing breaks
   - `LiveBuffer` — cursor monotonicity, ring eviction, dedup/aggregation, severity
     escalation.
   - Each detector — feed sample log/error lines → assert the expected `Issue`.
+  - `reportError` / `reportIssue` — assert no-op before `start()`, and that after
+    `start()` the call produces an `Issue` with `source: 'reported'`, the given
+    `category`, and dedup/aggregation on repeat.
   - Route resolver — `WidgetTester`-pumped app across `MaterialApp.routes`, `go_router`,
     and Navigator 2.0 → assert correct current route with no observer wired.
 - **Connection (headline fix):** inject a fake VM connector →
