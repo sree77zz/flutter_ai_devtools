@@ -6,7 +6,8 @@
       "PowerShell(Stop-Process *)",
       "Bash(bash \"C:\\\\Users\\\\HP\\\\.claude\\\\plugins\\\\cache\\\\claude-plugins-official\\\\superpowers\\\\5.1.0\\\\scripts\\\\start-server.sh\" --project-dir \"c:\\\\Users\\\\HP\\\\AndroidStudioProjects\\\\flutter_ai_devtools\")",
       "Bash(flutter test *)",
-      "Bash(powershell -Command \"Test-Path 'lib\\\\src\\\\transport'; Test-Path 'lib\\\\src\\\\tools'; Test-Path 'lib\\\\src\\\\adapters'; Test-Path 'lib\\\\src\\\\core'; Test-Path 'lib\\\\src\\\\services'; Test-Path 'lib\\\\src\\\\logging'\")"
+      "Bash(powershell -Command \"Test-Path 'lib\\\\src\\\\transport'; Test-Path 'lib\\\\src\\\\tools'; Test-Path 'lib\\\\src\\\\adapters'; Test-Path 'lib\\\\src\\\\core'; Test-Path 'lib\\\\src\\\\services'; Test-Path 'lib\\\\src\\\\logging'\")",
+      "Bash(flutter analyze *)"
     ]
   }
 }
