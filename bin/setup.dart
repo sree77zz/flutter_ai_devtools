@@ -1,6 +1,7 @@
 // bin/setup.dart
-import 'dart:convert';
 import 'dart:io';
+
+import 'package:flutter_ai_devtools/src/setup/launch_config.dart';
 
 Future<void> main(List<String> args) async {
   await _writeMcpJson();
@@ -9,57 +10,32 @@ Future<void> main(List<String> args) async {
 }
 
 Future<void> _writeMcpJson() async {
-  const config = {
-    'mcpServers': {
-      'flutter_ai_devtools': {
-        'type': 'stdio',
-        'command': 'dart',
-        'args': ['run', 'flutter_ai_devtools:devtools_mcp'],
-      },
-    },
-  };
   final file = File('.mcp.json');
-  if (await file.exists()) {
-    stdout.write('.mcp.json already exists. Overwrite? [y/N] ');
-    final answer = stdin.readLineSync()?.toLowerCase() ?? 'n';
-    if (answer != 'y') {
-      stdout.writeln('Skipped .mcp.json.');
-      return;
-    }
+  final existing = await file.exists() ? await file.readAsString() : null;
+  try {
+    await file.writeAsString(mergeMcpJson(existing));
+    stdout.writeln('✓ Merged flutter_ai_devtools into .mcp.json (stdio transport)');
+  } on FormatException {
+    stdout.writeln('⚠ .mcp.json exists but could not be parsed — leaving it '
+        'unchanged. Add a "flutter_ai_devtools" stdio server (command: dart, '
+        'args: [run, flutter_ai_devtools:devtools_mcp]) manually.');
   }
-  await file.writeAsString(
-      '${const JsonEncoder.withIndent('  ').convert(config)}\n');
-  stdout.writeln('✓ Created .mcp.json (stdio transport — no second terminal needed)');
 }
 
 Future<void> _writeVsCodeLaunch() async {
   await Directory('.vscode').create(recursive: true);
   final file = File('.vscode/launch.json');
-  const config = {
-    'version': '0.2.0',
-    'configurations': [
-      {
-        'name': 'Flutter + AI DevTools',
-        'request': 'launch',
-        'type': 'dart',
-        'args': [
-          '--vm-service-port=8181',
-          '--disable-service-auth-codes',
-        ],
-      },
-    ],
-  };
-  if (await file.exists()) {
-    stdout.write('.vscode/launch.json already exists. Overwrite? [y/N] ');
-    final answer = stdin.readLineSync()?.toLowerCase() ?? 'n';
-    if (answer != 'y') {
-      stdout.writeln('Skipped .vscode/launch.json.');
-      return;
-    }
+  final existing = await file.exists() ? await file.readAsString() : null;
+  try {
+    final merged = mergeLaunchConfig(existing);
+    await file.writeAsString(renderLaunchJson(merged));
+    stdout.writeln('✓ Merged "Flutter + AI DevTools" into .vscode/launch.json');
+  } on FormatException {
+    stdout.writeln('⚠ .vscode/launch.json exists but could not be parsed '
+        '(e.g. contains // comments) — leaving it unchanged. Add a dart launch '
+        'config named "Flutter + AI DevTools" with args '
+        '--host-vmservice-port=8181 --disable-service-auth-codes manually.');
   }
-  await file.writeAsString(
-      '${const JsonEncoder.withIndent('  ').convert(config)}\n');
-  stdout.writeln('✓ Created .vscode/launch.json');
 }
 
 void _printInstructions() {
@@ -70,11 +46,10 @@ Setup complete!
 1. Add to your main():
      await FlutterAiDevtools.start();
 
-2. Run your Flutter app:
-     flutter run
-   The bridge finds the VM service automatically via lockfile.
+2. In VSCode's Run panel, pick "Flutter + AI DevTools" and press Run.
+   (This pins the VM-service port so the bridge connects deterministically.)
 
-3. In Claude Code, run /mcp — flutter_ai_devtools should show connected.
-   Claude Code starts the MCP bridge automatically; no second terminal needed.
+3. In Claude Code, run /mcp — flutter_ai_devtools shows connected.
+   Claude Code starts the bridge automatically; no second terminal needed.
 ''');
 }

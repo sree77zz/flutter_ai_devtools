@@ -2,6 +2,7 @@
 import 'dart:collection';
 import '../models/error_report.dart';
 import '../models/frame_stats.dart';
+import '../models/issue.dart';
 import '../models/render_issue.dart';
 import '../models/route_info.dart';
 import '../models/widget_snapshot.dart';
@@ -11,11 +12,15 @@ class RuntimeStore {
     this.maxErrors = 100,
     this.maxFrames = 300,
     this.maxRenderIssues = 200,
+    this.maxIssues = 200,
+    this.recurrenceThreshold = 5,
   });
 
   final int maxErrors;
   final int maxFrames;
   final int maxRenderIssues;
+  final int maxIssues;
+  final int recurrenceThreshold;
 
   WidgetTreeSnapshot? _widgetTree;
   RouteInfo? _currentRoute;
@@ -24,6 +29,7 @@ class RuntimeStore {
   final _frames = Queue<FrameStats>();
   final _renderIssues = Queue<RenderIssue>();
   final _rebuildCounts = <String, int>{};
+  final _issues = <String, Issue>{};
 
   // ── Write ──────────────────────────────────────────────────────────────────
 
@@ -62,6 +68,30 @@ class RuntimeStore {
     _rebuildCounts[widgetType] = (_rebuildCounts[widgetType] ?? 0) + 1;
   }
 
+  /// Adds or merges [incoming] by signature: repeats increment the count, push
+  /// lastSeen forward, keep the highest severity seen, and escalate to critical
+  /// once the count reaches [recurrenceThreshold].
+  void addIssue(Issue incoming) {
+    final existing = _issues[incoming.signature];
+    if (existing != null) {
+      final count = existing.count + 1;
+      var severity = existing.severity.index >= incoming.severity.index
+          ? existing.severity
+          : incoming.severity;
+      if (count >= recurrenceThreshold) severity = IssueSeverity.critical;
+      _issues[incoming.signature] = existing.copyWith(
+        count: count,
+        lastSeen: incoming.lastSeen,
+        severity: severity,
+      );
+      return;
+    }
+    while (_issues.length >= maxIssues && _issues.isNotEmpty) {
+      _issues.remove(_issues.keys.first);
+    }
+    _issues[incoming.signature] = incoming;
+  }
+
   // ── Read ───────────────────────────────────────────────────────────────────
 
   WidgetTreeSnapshot? get currentWidgetTree => _widgetTree;
@@ -72,6 +102,7 @@ class RuntimeStore {
   FrameSummary get frameSummary => FrameSummary.fromFrames(recentFrames);
   List<RenderIssue> get renderIssues => List.unmodifiable(_renderIssues);
   Map<String, int> get widgetRebuildCounts => Map.unmodifiable(_rebuildCounts);
+  List<Issue> get issues => List.unmodifiable(_issues.values);
 
   void clear() {
     _widgetTree = null;
@@ -81,5 +112,6 @@ class RuntimeStore {
     _frames.clear();
     _renderIssues.clear();
     _rebuildCounts.clear();
+    _issues.clear();
   }
 }

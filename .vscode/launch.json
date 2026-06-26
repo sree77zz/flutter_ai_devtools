@@ -6,7 +6,7 @@
       "request": "launch",
       "type": "dart",
       "args": [
-        "--vm-service-port=8181",
+        "--host-vmservice-port=8181",
         "--disable-service-auth-codes"
       ]
     }

@@ -1,7 +1,41 @@
 import 'dart:convert';
 import 'dart:developer' as dev;
 
+import 'models/issue.dart';
+import 'routing/route_resolver.dart';
 import 'store/runtime_store.dart';
+
+/// Builds the `get_issues` result: optional `category` / `minSeverity` filters,
+/// sorted by severity then count (desc).
+Map<String, dynamic> buildIssuesResult(
+    RuntimeStore store, Map<String, String> params) {
+  final category = _enumByName(IssueCategory.values, params['category']);
+  final minSeverity = _enumByName(IssueSeverity.values, params['minSeverity']);
+  var issues = store.issues;
+  if (category != null) {
+    issues = issues.where((i) => i.category == category).toList();
+  }
+  if (minSeverity != null) {
+    issues = issues.where((i) => i.severity.index >= minSeverity.index).toList();
+  }
+  final sorted = issues.toList()
+    ..sort((a, b) {
+      final s = b.severity.index.compareTo(a.severity.index);
+      return s != 0 ? s : b.count.compareTo(a.count);
+    });
+  return {
+    'count': sorted.length,
+    'issues': sorted.map((i) => i.toJson()).toList(),
+  };
+}
+
+T? _enumByName<T extends Enum>(List<T> values, String? name) {
+  if (name == null) return null;
+  for (final v in values) {
+    if (v.name == name) return v;
+  }
+  return null;
+}
 
 void registerServiceExtensions(RuntimeStore store) {
   _register('get_runtime_summary', (params) {
@@ -19,6 +53,10 @@ void registerServiceExtensions(RuntimeStore store) {
           .take(5)
           .map((e) => {'widget': e.key, 'count': e.value})
           .toList(),
+      'issueCount': store.issues.length,
+      'criticalIssues':
+          store.issues.where((i) => i.severity == IssueSeverity.critical).length,
+      'currentRoute': resolveCurrentRouteName(),
       'capturedAt': DateTime.now().toIso8601String(),
     };
   });
@@ -38,10 +76,20 @@ void registerServiceExtensions(RuntimeStore store) {
   });
 
   _register('get_current_route', (params) {
-    final route = store.currentRoute;
-    if (route == null) return {'error': 'No route captured yet'};
-    return route.toJson();
+    final auto = resolveCurrentRouteName();
+    final observed = store.currentRoute;
+    if (auto == null && observed == null) {
+      return {'error': 'No route captured yet'};
+    }
+    return {
+      'name': observed?.name ?? auto,
+      'source': observed != null ? 'observer' : 'auto',
+      if (auto != null) 'autoDetected': auto,
+      if (observed != null) 'observed': observed.toJson(),
+    };
   });
+
+  _register('get_issues', (params) => buildIssuesResult(store, params));
 
   _register('get_recent_errors', (params) {
     final limit = int.tryParse(params['limit'] ?? '') ?? 20;

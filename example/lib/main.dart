@@ -46,7 +46,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _counter = 0;
-  final String _status = 'DevTools running — MCP on localhost:8765';
+  final String _status =
+      'DevTools running — Claude connects via the auto-started MCP bridge';
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('flutter_ai_devtools'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -91,6 +92,12 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: const Icon(Icons.warning, color: Colors.orange),
               label: const Text('Trigger test error (error collector)'),
             ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _reportHandledError,
+              icon: const Icon(Icons.report, color: Colors.red),
+              label: const Text('Report a handled error (reportError → get_issues)'),
+            ),
             const SizedBox(height: 24),
             const _McpInfoCard(),
           ],
@@ -108,6 +115,24 @@ class _HomeScreenState extends State<HomeScreen> {
     ));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Test error emitted — check MCP client!')),
+    );
+  }
+
+  /// Demonstrates surfacing a *handled* error (caught, not rethrown) so it still
+  /// shows up in `get_issues` — the kind of error nothing else can see.
+  void _reportHandledError() {
+    try {
+      throw Exception('Simulated API failure: charge declined');
+    } catch (e, st) {
+      FlutterAiDevtools.reportError(
+        e,
+        st,
+        category: 'api',
+        context: {'orderId': _counter, 'endpoint': '/charge'},
+      );
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Handled error reported — ask Claude: get_issues')),
     );
   }
 }
@@ -156,13 +181,14 @@ class _McpInfoCard extends StatelessWidget {
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
-            const Text('Claude Code → localhost:8765/sse → VM service → app'),
+            const Text('Claude Code → devtools_mcp (stdio) → VM service → app'),
             const SizedBox(height: 8),
             const Text(
-              'Start bridge: dart run flutter_ai_devtools:serve\n'
-              'Tools: get_runtime_summary, get_widget_tree, get_current_route,\n'
-              'get_recent_errors, get_frame_stats, analyze_performance,\n'
-              'analyze_rebuilds, get_render_issues',
+              'Bridge auto-starts via .mcp.json (run dart run flutter_ai_devtools:setup once).\n'
+              'Tools: get_logs, get_issues, get_runtime_summary, get_current_route,\n'
+              'get_widget_tree, get_recent_errors, get_render_issues, get_frame_stats,\n'
+              'analyze_performance, analyze_rebuilds, get_connection_status,\n'
+              'hot_reload, get_memory_info',
               style: TextStyle(fontSize: 11, color: Colors.grey),
             ),
           ],

@@ -1,103 +1,131 @@
+import 'dart:async';
 import 'dart:io';
-import 'package:vm_service/vm_service.dart';
-import 'package:vm_service/vm_service_io.dart';
+import 'package:vm_service/vm_service.dart' as vm;
 import '../lockfile.dart';
+import '../models/log_entry.dart';
+import 'connection_manager.dart';
+import 'live_buffer.dart';
+import 'log_normalizer.dart';
+import 'vm_session.dart';
 
+/// Resilient bridge between the MCP server and a running Flutter app's VM service.
+///
+/// Never throws on a missing app: [start] launches a background connect loop,
+/// and [liveBuffer] fills from the app's stdout/stderr/logging streams whenever
+/// a session is live. Tool handlers call [callTool]/[hotReload]/[memoryInfo]/
+/// [status]; when disconnected these return a clear, actionable result.
 class VmBridge {
-  VmService? _service;
-  String? _mainIsolateId;
+  VmBridge({
+    LiveBuffer? liveBuffer,
+    VmConnector connector = connectVmService,
+    Duration retryDelay = const Duration(seconds: 1),
+  })  : liveBuffer = liveBuffer ?? LiveBuffer(),
+        _manager = ConnectionManager(
+          candidates: _candidateUris,
+          connector: connector,
+          retryDelay: retryDelay,
+        );
 
-  /// Connect to the Dart VM service.
-  ///
-  /// If [vmUri] is supplied, connects directly to that URI.
-  /// Otherwise tries each candidate in order: lockfile → DART_VM_SERVICE_URI
-  /// env var → fixed port 8181.  A stale lockfile URI (dead process) is
-  /// skipped automatically.
-  Future<bool> connect([String? vmUri]) async {
-    if (_service != null && _mainIsolateId != null) return true;
-    if (vmUri != null) return _connectTo(vmUri);
+  final LiveBuffer liveBuffer;
+  final ConnectionManager _manager;
+  final _logSubs = <StreamSubscription<vm.Event>>[];
+  VmSession? _ingestingSession;
+  Timer? _ingestionTimer;
 
-    for (final uri in await _candidateUris()) {
-      if (await _connectTo(uri)) return true;
-    }
-    return false;
+  /// Begins the resilient connect loop and (re)attaches log ingestion as
+  /// sessions come and go.
+  void start() {
+    _manager.start();
+    _ingestionTimer = Timer.periodic(
+        const Duration(milliseconds: 500), (_) => _syncIngestion());
   }
 
-  Future<bool> _connectTo(String uri) async {
-    try {
-      final normalized = uri.endsWith('/') ? uri : '$uri/';
-      final wsBase = normalized
-          .replaceFirst('https://', 'wss://')
-          .replaceFirst('http://', 'ws://');
-      final ws = '${wsBase}ws';
-      _service = await vmServiceConnectUri(ws);
-      final vm = await _service!.getVM();
-      final isolates = vm.isolates;
-      if (isolates == null || isolates.isEmpty) {
-        stderr.writeln('[VmBridge] No isolates found at $uri');
-        _service = null;
-        _mainIsolateId = null;
-        return false;
-      }
-      _mainIsolateId = isolates.first.id;
-      stderr.writeln('[VmBridge] Connected to VM at $uri');
-      return true;
-    } catch (e) {
-      stderr.writeln('[VmBridge] Connection failed: $e');
-      _service = null;
-      _mainIsolateId = null;
-      return false;
+  void _syncIngestion() {
+    final s = _manager.session;
+    if (identical(s, _ingestingSession)) return;
+    for (final sub in _logSubs) {
+      sub.cancel();
     }
+    _logSubs.clear();
+    _ingestingSession = s;
+    if (s == null) return;
+    _logSubs.add(s.stdout.listen((e) => _ingest(e, LogSource.stdout)));
+    _logSubs.add(s.stderr.listen((e) => _ingest(e, LogSource.stderr)));
+    _logSubs.add(s.logging.listen((e) => _ingest(e, LogSource.developerLog)));
   }
+
+  void _ingest(vm.Event event, LogSource source) {
+    final entry = normalizeVmEvent(event, source: source);
+    if (entry != null) liveBuffer.addLog(entry);
+  }
+
+  ConnectionStatus get status => _manager.status;
+  bool get connected => _manager.status.connected;
 
   Future<Map<String, dynamic>> callTool(
       String name, Map<String, dynamic> args) async {
-    if (_service == null || _mainIsolateId == null) {
-      return {'error': 'Not connected to Flutter app'};
-    }
+    final s = _manager.session;
+    if (s == null) return _notConnected();
     try {
-      final response = await _service!.callServiceExtension(
+      return await s.callExtension(
         'ext.flutter_ai_devtools.$name',
-        isolateId: _mainIsolateId,
-        args: args.map((k, v) => MapEntry(k, v.toString())),
+        args.map((k, v) => MapEntry(k, v.toString())),
       );
-      // response.json IS the decoded data map the extension returned.
-      // There is no nested 'result' string field.
-      return response.json ?? {};
+    } catch (e) {
+      return {'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> hotReload() async {
+    final s = _manager.session;
+    if (s == null) return _notConnected();
+    try {
+      await s.reloadSources();
+      return {'reloaded': true};
+    } catch (e) {
+      return {'error': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> memoryInfo() async {
+    final s = _manager.session;
+    if (s == null) return _notConnected();
+    try {
+      return await s.memoryUsage();
     } catch (e) {
       return {'error': e.toString()};
     }
   }
 
   Future<void> dispose() async {
-    await _service?.dispose();
-    _service = null;
-    _mainIsolateId = null;
+    _ingestionTimer?.cancel();
+    _ingestionTimer = null;
+    for (final sub in _logSubs) {
+      await sub.cancel();
+    }
+    _logSubs.clear();
+    await _manager.dispose();
   }
 
-  static Future<List<String>> _candidateUris() async {
-    final candidates = <String>[];
+  static Map<String, dynamic> _notConnected() => {
+        'error': 'Flutter app not connected. Launch the "Flutter + AI DevTools" '
+            'run configuration (or: flutter run --host-vmservice-port=8181 '
+            '--disable-service-auth-codes).',
+      };
 
-    // 1. Lockfile (written by the Flutter app on desktop).
-    //    Skip if the app process is no longer alive (stale entry).
+  /// Ordered discovery: pinned port → desktop lockfile → env override.
+  static Future<List<String>> _candidateUris() async {
+    final candidates = <String>['http://127.0.0.1:8181/'];
     final lockData = await readLockfile();
     if (lockData != null) {
       final lockUri = lockData['vmServiceUri'] as String?;
       final lockPid = lockData['pid'] as int?;
-      if (lockUri != null &&
-          (lockPid == null || isProcessAlive(lockPid))) {
+      if (lockUri != null && (lockPid == null || isProcessAlive(lockPid))) {
         candidates.add(lockUri);
       }
     }
-
-    // 2. Environment variable (manual override or wrapper scripts).
     final envUri = Platform.environment['DART_VM_SERVICE_URI'];
     if (envUri != null) candidates.add(envUri);
-
-    // 3. Fixed port — works when flutter run uses
-    //    --vm-service-port=8181 --disable-service-auth-codes.
-    candidates.add('http://localhost:8181/');
-
     return candidates;
   }
 }

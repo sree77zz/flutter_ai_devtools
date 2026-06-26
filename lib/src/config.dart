@@ -5,9 +5,12 @@ class CollectorConfig {
     this.errors = true,
     this.routes = true,
     this.renders = true,
+    this.lifecycle = true,
     this.maxErrors = 100,
     this.maxFrames = 300,
     this.maxRenderIssues = 200,
+    this.maxIssues = 200,
+    this.recurrenceThreshold = 5,
     this.widgetSnapshotMaxDepth = 20,
     this.widgetSnapshotMaxNodes = 500,
   });
@@ -17,9 +20,12 @@ class CollectorConfig {
   final bool errors;
   final bool routes;
   final bool renders;
+  final bool lifecycle;
   final int maxErrors;
   final int maxFrames;
   final int maxRenderIssues;
+  final int maxIssues;
+  final int recurrenceThreshold;
   final int widgetSnapshotMaxDepth;
   final int widgetSnapshotMaxNodes;
 }
