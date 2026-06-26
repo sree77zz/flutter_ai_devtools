@@ -36,6 +36,8 @@ class FlutterAiDevtools {
       maxErrors: collectors.maxErrors,
       maxFrames: collectors.maxFrames,
       maxRenderIssues: collectors.maxRenderIssues,
+      maxIssues: collectors.maxIssues,
+      recurrenceThreshold: collectors.recurrenceThreshold,
     );
 
     if (collectors.routes) {
