@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'collectors/base_collector.dart';
 import 'collectors/error_collector.dart';
 import 'collectors/frame_collector.dart';
+import 'collectors/lifecycle_collector.dart';
 import 'collectors/render_collector.dart';
 import 'collectors/route_collector.dart';
 import 'collectors/widget_collector.dart';
@@ -58,6 +59,9 @@ class FlutterAiDevtools {
     }
     if (collectors.renders) {
       _collectors.add(RenderCollector(store: _store!, config: collectors));
+    }
+    if (collectors.lifecycle) {
+      _collectors.add(LifecycleCollector(store: _store!, config: collectors));
     }
 
     for (final c in _collectors) {
