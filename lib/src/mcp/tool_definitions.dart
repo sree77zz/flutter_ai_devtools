@@ -34,6 +34,21 @@ void registerBridgeTools(ToolDispatcher d, VmBridge bridge) {
       description: 'Performance analysis pipeline');
   d.register('analyze_rebuilds', (a) => bridge.callTool('analyze_rebuilds', a),
       description: 'Most frequently rebuilding widgets');
+  d.register('get_issues', (a) => bridge.callTool('get_issues', a),
+      description: 'Deduplicated issues: exceptions, layout/render, lifecycle, reported',
+      schema: {
+        'type': 'object',
+        'properties': {
+          'category': {
+            'type': 'string',
+            'enum': ['exception', 'layoutRender', 'lifecycle', 'reported'],
+          },
+          'minSeverity': {
+            'type': 'string',
+            'enum': ['info', 'warning', 'error', 'critical'],
+          },
+        },
+      });
 
   // ── Live / console / connection tools (bridge-direct) ────────────────────
   d.register('get_logs', (a) async {
