@@ -9,20 +9,33 @@ class WidgetCollector extends BaseCollector {
   WidgetCollector({required super.store, required super.config});
 
   Timer? _snapshotTimer;
+  RebuildDirtyWidgetCallback? _prevRebuildCallback;
 
   @override
   String get id => 'widget_collector';
 
   @override
   Future<void> onStart() async {
-    if (kDebugMode) debugPrintRebuildDirtyWidgets = true;
+    // Count widget rebuilds *silently* via Flutter's rebuild hook. We
+    // deliberately do NOT enable debugPrintRebuildDirtyWidgets: it prints every
+    // rebuild to stdout (thousands of lines/min) and drowns the live console
+    // that get_logs surfaces. This callback feeds store.widgetRebuildCounts
+    // (used by analyze_rebuilds) with zero console output, and chains any
+    // previously-installed hook.
+    if (kDebugMode) {
+      _prevRebuildCallback = debugOnRebuildDirtyWidget;
+      debugOnRebuildDirtyWidget = (element, builtOnce) {
+        _prevRebuildCallback?.call(element, builtOnce);
+        store.incrementRebuild(element.widget.runtimeType.toString());
+      };
+    }
     _snapshotTimer = Timer.periodic(const Duration(seconds: 3), (_) => _capture());
   }
 
   @override
   Future<void> onStop() async {
     _snapshotTimer?.cancel();
-    if (kDebugMode) debugPrintRebuildDirtyWidgets = false;
+    if (kDebugMode) debugOnRebuildDirtyWidget = _prevRebuildCallback;
   }
 
   void _capture() {
@@ -84,8 +97,6 @@ class WidgetCollector extends BaseCollector {
       rebuildCount: store.widgetRebuildCounts[type] ?? 0,
     );
   }
-
-  void recordRebuild(String widgetType) => store.incrementRebuild(widgetType);
 }
 
 class _Counter {
