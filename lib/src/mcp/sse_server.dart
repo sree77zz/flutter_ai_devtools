@@ -66,8 +66,8 @@ class SseServer {
       req.response.headers.add('Access-Control-Allow-Origin', '*');
 
       // Tell the client where to POST messages (MCP SSE transport spec).
-      req.response.write(
-          'event: endpoint\ndata: /message?sessionId=$sessionId\n\n');
+      req.response
+          .write('event: endpoint\ndata: /message?sessionId=$sessionId\n\n');
 
       // Close the controller when the client disconnects.
       unawaited(req.response.done.then((_) {
@@ -109,8 +109,7 @@ class SseServer {
       return;
     }
 
-    final body =
-        await req.cast<List<int>>().transform(utf8.decoder).join();
+    final body = await req.cast<List<int>>().transform(utf8.decoder).join();
     Map<String, dynamic> rpc;
     try {
       rpc = jsonDecode(body) as Map<String, dynamic>;
@@ -134,7 +133,8 @@ class SseServer {
     // Responses go through the SSE stream, not the POST body.
     try {
       final result = await _dispatch(method, params);
-      controller.add(jsonEncode({'jsonrpc': '2.0', 'id': id, 'result': result}));
+      controller
+          .add(jsonEncode({'jsonrpc': '2.0', 'id': id, 'result': result}));
     } catch (e) {
       controller.add(jsonEncode(_error(id, -32603, e.toString())));
     }

@@ -108,9 +108,10 @@ class VmBridge {
   }
 
   static Map<String, dynamic> _notConnected() => {
-        'error': 'Flutter app not connected. Launch the "Flutter + AI DevTools" '
-            'run configuration (or: flutter run --host-vmservice-port=8181 '
-            '--disable-service-auth-codes).',
+        'error':
+            'Flutter app not connected. Launch the "Flutter + AI DevTools" '
+                'run configuration (or: flutter run --host-vmservice-port=8181 '
+                '--disable-service-auth-codes).',
       };
 
   /// Ordered discovery: pinned port → desktop lockfile → env override.

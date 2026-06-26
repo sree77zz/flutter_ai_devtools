@@ -88,7 +88,8 @@ class FrameSummary {
     final avgBuild = builds.reduce((a, b) => a + b) / builds.length;
     final avgRaster = rasters.reduce((a, b) => a + b) / rasters.length;
     final janky = frames.where((f) => f.isJanky).length;
-    final p99Index = ((builds.length * 0.99) - 1).round().clamp(0, builds.length - 1);
+    final p99Index =
+        ((builds.length * 0.99) - 1).round().clamp(0, builds.length - 1);
     final totalMs = frames.fold<double>(0, (s, f) => s + f.totalDurationMs);
     final fps = totalMs > 0 ? (frames.length / (totalMs / 1000)) : 0.0;
     return FrameSummary(

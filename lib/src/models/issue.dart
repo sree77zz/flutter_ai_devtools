@@ -77,6 +77,7 @@ class Issue {
 String issueSignature(IssueCategory category, String key) {
   final norm = key.trim().replaceAll(RegExp(r'\s+'), ' ');
   final bounded = norm.length > 120 ? norm.substring(0, 120) : norm;
-  final hash = '${category.name}|$bounded'.hashCode.toUnsigned(32).toRadixString(16);
+  final hash =
+      '${category.name}|$bounded'.hashCode.toUnsigned(32).toRadixString(16);
   return '${category.name}_$hash';
 }

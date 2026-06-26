@@ -16,7 +16,8 @@ Map<String, dynamic> buildIssuesResult(
     issues = issues.where((i) => i.category == category).toList();
   }
   if (minSeverity != null) {
-    issues = issues.where((i) => i.severity.index >= minSeverity.index).toList();
+    issues =
+        issues.where((i) => i.severity.index >= minSeverity.index).toList();
   }
   final sorted = issues.toList()
     ..sort((a, b) {
@@ -54,8 +55,9 @@ void registerServiceExtensions(RuntimeStore store) {
           .map((e) => {'widget': e.key, 'count': e.value})
           .toList(),
       'issueCount': store.issues.length,
-      'criticalIssues':
-          store.issues.where((i) => i.severity == IssueSeverity.critical).length,
+      'criticalIssues': store.issues
+          .where((i) => i.severity == IssueSeverity.critical)
+          .length,
       'currentRoute': resolveCurrentRouteName(),
       'capturedAt': DateTime.now().toIso8601String(),
     };
@@ -102,10 +104,12 @@ void registerServiceExtensions(RuntimeStore store) {
     };
   });
 
-  _register('get_render_issues', (params) => {
-    'count': store.renderIssues.length,
-    'issues': store.renderIssues.map((r) => r.toJson()).toList(),
-  });
+  _register(
+      'get_render_issues',
+      (params) => {
+            'count': store.renderIssues.length,
+            'issues': store.renderIssues.map((r) => r.toJson()).toList(),
+          });
 
   _register('get_frame_stats', (params) {
     final s = store.frameSummary;
@@ -175,7 +179,8 @@ void _register(
   String name,
   Map<String, dynamic> Function(Map<String, String> params) handler,
 ) {
-  dev.registerExtension('ext.flutter_ai_devtools.$name', (method, params) async {
+  dev.registerExtension('ext.flutter_ai_devtools.$name',
+      (method, params) async {
     try {
       final result = handler(params);
       return dev.ServiceExtensionResponse.result(jsonEncode(result));

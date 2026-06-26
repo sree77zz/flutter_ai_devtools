@@ -9,16 +9,21 @@ void main() {
       final configs = out['configurations'] as List;
       expect(configs, hasLength(1));
       expect((configs.first as Map)['name'], 'Flutter + AI DevTools');
-      expect((configs.first as Map)['args'],
-          containsAll(['--host-vmservice-port=8181', '--disable-service-auth-codes']));
+      expect(
+          (configs.first as Map)['args'],
+          containsAll(
+              ['--host-vmservice-port=8181', '--disable-service-auth-codes']));
     });
 
     test('does not include the conflicting --vm-service-port flag', () {
       // Flutter rejects --vm-service-port alongside --host-vmservice-port.
       final out = mergeLaunchConfig(null);
-      final ai = (out['configurations'] as List).firstWhere(
-          (c) => (c as Map)['name'] == 'Flutter + AI DevTools') as Map;
-      expect((ai['args'] as List).any((a) => (a as String).startsWith('--vm-service-port')),
+      final ai = (out['configurations'] as List)
+              .firstWhere((c) => (c as Map)['name'] == 'Flutter + AI DevTools')
+          as Map;
+      expect(
+          (ai['args'] as List)
+              .any((a) => (a as String).startsWith('--vm-service-port')),
           isFalse);
     });
 
@@ -30,8 +35,9 @@ void main() {
         ],
       });
       final out = mergeLaunchConfig(existing);
-      final names =
-          (out['configurations'] as List).map((c) => (c as Map)['name']).toList();
+      final names = (out['configurations'] as List)
+          .map((c) => (c as Map)['name'])
+          .toList();
       expect(names, containsAll(['My App', 'Flutter + AI DevTools']));
     });
 
@@ -45,8 +51,9 @@ void main() {
 
     test('canonical config includes the host-vmservice-port arg', () {
       final out = mergeLaunchConfig(null);
-      final ai = (out['configurations'] as List).firstWhere(
-          (c) => (c as Map)['name'] == 'Flutter + AI DevTools') as Map;
+      final ai = (out['configurations'] as List)
+              .firstWhere((c) => (c as Map)['name'] == 'Flutter + AI DevTools')
+          as Map;
       expect(ai['args'], contains('--host-vmservice-port=8181'));
     });
 
@@ -67,17 +74,20 @@ void main() {
       final aiEntries = (out['configurations'] as List)
           .where((c) => (c as Map)['name'] == 'Flutter + AI DevTools')
           .toList();
-      expect(aiEntries, hasLength(1), reason: 'still exactly one managed entry');
+      expect(aiEntries, hasLength(1),
+          reason: 'still exactly one managed entry');
       expect((aiEntries.first as Map)['args'],
           contains('--host-vmservice-port=8181'));
       // other user configs preserved
       final names = (out['configurations'] as List)
-          .map((c) => (c as Map)['name']).toList();
+          .map((c) => (c as Map)['name'])
+          .toList();
       expect(names, contains('My App'));
     });
 
     test('tolerates a non-list configurations value', () {
-      final out = mergeLaunchConfig(jsonEncode({'configurations': <String, dynamic>{}}));
+      final out = mergeLaunchConfig(
+          jsonEncode({'configurations': <String, dynamic>{}}));
       final ai = (out['configurations'] as List)
           .where((c) => (c as Map)['name'] == 'Flutter + AI DevTools');
       expect(ai, hasLength(1));
@@ -100,8 +110,7 @@ void main() {
   group('mergeMcpJson', () {
     test('creates the flutter_ai_devtools stdio server from null', () {
       final json = jsonDecode(mergeMcpJson(null)) as Map<String, dynamic>;
-      final server =
-          (json['mcpServers'] as Map)['flutter_ai_devtools'] as Map;
+      final server = (json['mcpServers'] as Map)['flutter_ai_devtools'] as Map;
       expect(server['type'], 'stdio');
       expect(server['args'], contains('flutter_ai_devtools:devtools_mcp'));
     });

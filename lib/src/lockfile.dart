@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-
 Future<void> writeLockfile({int? mcpPort, String? vmServiceUri}) async {
   // Only desktop platforms can expose a lockfile that the CLI can actually read.
   // On Android/iOS the filesystem isn't accessible from the host machine.

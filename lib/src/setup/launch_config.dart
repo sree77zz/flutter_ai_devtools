@@ -63,8 +63,9 @@ String mergeMcpJson(String? existingJson) {
     doc = decoded;
   }
   final rawServers = doc['mcpServers'];
-  final servers =
-      (rawServers is Map) ? rawServers.cast<String, dynamic>() : <String, dynamic>{};
+  final servers = (rawServers is Map)
+      ? rawServers.cast<String, dynamic>()
+      : <String, dynamic>{};
   servers['flutter_ai_devtools'] = {
     'type': 'stdio',
     'command': 'dart',

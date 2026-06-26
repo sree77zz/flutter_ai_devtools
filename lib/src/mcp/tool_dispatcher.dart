@@ -1,6 +1,7 @@
 import 'dart:convert';
 
-typedef ToolHandler = Future<Map<String, dynamic>> Function(Map<String, dynamic> args);
+typedef ToolHandler = Future<Map<String, dynamic>> Function(
+    Map<String, dynamic> args);
 
 class ToolNotFoundException implements Exception {
   const ToolNotFoundException(this.toolName);
@@ -27,22 +28,28 @@ class ToolDispatcher {
     };
   }
 
-  Future<Map<String, dynamic>> dispatch(String name, Map<String, dynamic> args) {
+  Future<Map<String, dynamic>> dispatch(
+      String name, Map<String, dynamic> args) {
     final handler = _handlers[name];
     if (handler == null) throw ToolNotFoundException(name);
     return handler(args);
   }
 
   List<String> get toolNames => List.unmodifiable(_handlers.keys);
-  List<Map<String, dynamic>> get toolManifests => List.unmodifiable(_schemas.values);
+  List<Map<String, dynamic>> get toolManifests =>
+      List.unmodifiable(_schemas.values);
 
   static Map<String, dynamic> mcpResult(Map<String, dynamic> content) => {
-    'content': [{'type': 'text', 'text': jsonEncode(content)}],
-    'isError': false,
-  };
+        'content': [
+          {'type': 'text', 'text': jsonEncode(content)}
+        ],
+        'isError': false,
+      };
 
   static Map<String, dynamic> mcpError(String message) => {
-    'content': [{'type': 'text', 'text': message}],
-    'isError': true,
-  };
+        'content': [
+          {'type': 'text', 'text': message}
+        ],
+        'isError': true,
+      };
 }

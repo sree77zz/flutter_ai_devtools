@@ -42,7 +42,7 @@ class ErrorCollector extends BaseCollector {
     ));
     final handledElsewhere =
         (config.renders && matchLayoutRender(msg) != null) ||
-        (config.lifecycle && matchLifecycle(msg) != null);
+            (config.lifecycle && matchLifecycle(msg) != null);
     if (!handledElsewhere) {
       store.addIssue(Issue(
         signature: issueSignature(IssueCategory.exception, msg),

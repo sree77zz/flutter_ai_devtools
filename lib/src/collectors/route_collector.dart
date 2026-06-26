@@ -41,8 +41,7 @@ class RouteCollector extends BaseCollector {
   final _uuid = const Uuid();
   final _stack = <String>[];
 
-  late final AnalystNavigatorObserver observer =
-      AnalystNavigatorObserver(this);
+  late final AnalystNavigatorObserver observer = AnalystNavigatorObserver(this);
 
   @override
   String get id => 'route_collector';

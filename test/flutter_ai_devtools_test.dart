@@ -98,13 +98,15 @@ void main() {
     });
 
     test('calculates janky percent correctly', () {
-      final frames = List.generate(10, (i) => FrameStats(
-        frameNumber: i,
-        buildDurationMicros: i < 5 ? 20000 : 5000,
-        rasterDurationMicros: 1000,
-        vsyncOverheadMicros: 0,
-        capturedAt: DateTime.now(),
-      ));
+      final frames = List.generate(
+          10,
+          (i) => FrameStats(
+                frameNumber: i,
+                buildDurationMicros: i < 5 ? 20000 : 5000,
+                rasterDurationMicros: 1000,
+                vsyncOverheadMicros: 0,
+                capturedAt: DateTime.now(),
+              ));
       final summary = FrameSummary.fromFrames(frames);
       expect(summary.jankyFrames, equals(5));
       expect(summary.jankyPercent, equals(50.0));

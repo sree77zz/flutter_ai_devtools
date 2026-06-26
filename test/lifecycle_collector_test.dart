@@ -11,13 +11,15 @@ void main() {
 
   setUp(() async {
     store = RuntimeStore();
-    collector = LifecycleCollector(store: store, config: const CollectorConfig());
+    collector =
+        LifecycleCollector(store: store, config: const CollectorConfig());
     await collector.start();
   });
   tearDown(() => collector.stop());
 
   void emit(String message) {
-    FlutterError.onError!(FlutterErrorDetails(exception: FlutterError(message)));
+    FlutterError
+        .onError!(FlutterErrorDetails(exception: FlutterError(message)));
   }
 
   test('detects setState after dispose', () {

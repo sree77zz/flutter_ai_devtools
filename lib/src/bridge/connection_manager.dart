@@ -87,7 +87,8 @@ class ConnectionManager {
     _disconnectSub = null;
     final old = _session;
     _session = null;
-    _status = const ConnectionStatus(connected: false, lastError: 'app disconnected');
+    _status =
+        const ConnectionStatus(connected: false, lastError: 'app disconnected');
     unawaited(old?.dispose());
   }
 

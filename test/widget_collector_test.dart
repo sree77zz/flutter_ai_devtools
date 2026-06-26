@@ -5,7 +5,8 @@ import 'package:flutter_ai_devtools/src/store/runtime_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('counts rebuilds silently without flooding stdout', (tester) async {
+  testWidgets('counts rebuilds silently without flooding stdout',
+      (tester) async {
     final store = RuntimeStore();
     final collector =
         WidgetCollector(store: store, config: const CollectorConfig());

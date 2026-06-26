@@ -17,7 +17,8 @@ void main() {
       library: 'widgets library',
     ));
 
-    final issues = store.issues.where((i) => i.category == IssueCategory.exception);
+    final issues =
+        store.issues.where((i) => i.category == IssueCategory.exception);
     expect(issues, isNotEmpty);
     expect(issues.first.source, IssueSource.detected);
     expect(issues.first.detail, contains('boom in build'));

@@ -24,7 +24,9 @@ class FakeSession implements VmSession {
   @override
   Stream<void> get disconnected => _disconnect.stream;
   @override
-  Future<Map<String, dynamic>> callExtension(String m, Map<String, String> a) async => {};
+  Future<Map<String, dynamic>> callExtension(
+          String m, Map<String, String> a) async =>
+      {};
   @override
   Future<void> reloadSources() async {}
   @override
@@ -96,7 +98,8 @@ void main() {
       await mgr.dispose();
     });
 
-    test('survives a throwing connector and connects on a later attempt', () async {
+    test('survives a throwing connector and connects on a later attempt',
+        () async {
       var calls = 0;
       final mgr = ConnectionManager(
         candidates: () async => ['ws://x/ws'],
@@ -110,7 +113,8 @@ void main() {
       mgr.start();
       await Future<void>.delayed(const Duration(milliseconds: 80));
       expect(mgr.status.connected, isTrue,
-          reason: 'loop must survive throwing connector and eventually connect');
+          reason:
+              'loop must survive throwing connector and eventually connect');
       await mgr.dispose();
     });
 

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_ai_devtools/flutter_ai_devtools.dart';
 
 /// Example demonstrating flutter_ai_devtools integration.
@@ -96,7 +96,8 @@ class _HomeScreenState extends State<HomeScreen> {
             OutlinedButton.icon(
               onPressed: _reportHandledError,
               icon: const Icon(Icons.report, color: Colors.red),
-              label: const Text('Report a handled error (reportError → get_issues)'),
+              label: const Text(
+                  'Report a handled error (reportError → get_issues)'),
             ),
             const SizedBox(height: 24),
             const _McpInfoCard(),
@@ -132,7 +133,8 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Handled error reported — ask Claude: get_issues')),
+      const SnackBar(
+          content: Text('Handled error reported — ask Claude: get_issues')),
     );
   }
 }
@@ -215,7 +217,7 @@ class DetailScreen extends StatelessWidget {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Back'), 
+              child: const Text('Back'),
             ),
           ],
         ),

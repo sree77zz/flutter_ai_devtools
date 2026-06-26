@@ -29,7 +29,8 @@ class WidgetCollector extends BaseCollector {
         store.incrementRebuild(element.widget.runtimeType.toString());
       };
     }
-    _snapshotTimer = Timer.periodic(const Duration(seconds: 3), (_) => _capture());
+    _snapshotTimer =
+        Timer.periodic(const Duration(seconds: 3), (_) => _capture());
   }
 
   @override
@@ -64,7 +65,9 @@ class WidgetCollector extends BaseCollector {
     required int maxNodes,
     required _Counter count,
   }) {
-    if (element == null || depth > maxDepth || count.value >= maxNodes) return null;
+    if (element == null || depth > maxDepth || count.value >= maxNodes) {
+      return null;
+    }
     count.value++;
     final type = element.widget.runtimeType.toString();
     Rect? rect;
@@ -72,7 +75,8 @@ class WidgetCollector extends BaseCollector {
       final ro = element.renderObject;
       if (ro is RenderBox && ro.hasSize) {
         final offset = ro.localToGlobal(Offset.zero);
-        rect = Rect.fromLTWH(offset.dx, offset.dy, ro.size.width, ro.size.height);
+        rect =
+            Rect.fromLTWH(offset.dx, offset.dy, ro.size.width, ro.size.height);
       }
     }
     final children = <WidgetNode>[];
@@ -92,7 +96,10 @@ class WidgetCollector extends BaseCollector {
       bounds: rect == null
           ? null
           : WidgetBounds(
-              x: rect.left, y: rect.top, width: rect.width, height: rect.height),
+              x: rect.left,
+              y: rect.top,
+              width: rect.width,
+              height: rect.height),
       children: children,
       rebuildCount: store.widgetRebuildCounts[type] ?? 0,
     );

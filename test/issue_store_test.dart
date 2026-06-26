@@ -69,7 +69,8 @@ void main() {
     });
   });
 
-  test('CollectorConfig exposes maxIssues / lifecycle / recurrenceThreshold', () {
+  test('CollectorConfig exposes maxIssues / lifecycle / recurrenceThreshold',
+      () {
     const c = CollectorConfig();
     expect(c.maxIssues, greaterThan(0));
     expect(c.lifecycle, isTrue);

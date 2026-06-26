@@ -7,17 +7,22 @@ import 'tool_dispatcher.dart';
 /// tools read directly from the bridge and its [VmBridge.liveBuffer].
 void registerBridgeTools(ToolDispatcher d, VmBridge bridge) {
   // ── App-state tools (service-extension proxies) ──────────────────────────
-  d.register('get_runtime_summary', (a) => bridge.callTool('get_runtime_summary', a),
+  d.register(
+      'get_runtime_summary', (a) => bridge.callTool('get_runtime_summary', a),
       description: 'Complete runtime health snapshot');
   d.register('get_widget_tree', (a) => bridge.callTool('get_widget_tree', a),
       description: 'Current widget tree snapshot',
       schema: {
         'type': 'object',
-        'properties': {'maxDepth': {'type': 'integer', 'default': 10}},
+        'properties': {
+          'maxDepth': {'type': 'integer', 'default': 10}
+        },
       });
-  d.register('get_current_route', (a) => bridge.callTool('get_current_route', a),
+  d.register(
+      'get_current_route', (a) => bridge.callTool('get_current_route', a),
       description: 'Active navigation route');
-  d.register('get_recent_errors', (a) => bridge.callTool('get_recent_errors', a),
+  d.register(
+      'get_recent_errors', (a) => bridge.callTool('get_recent_errors', a),
       description: 'Recent error history',
       schema: {
         'type': 'object',
@@ -26,16 +31,19 @@ void registerBridgeTools(ToolDispatcher d, VmBridge bridge) {
           'fatalOnly': {'type': 'boolean', 'default': false},
         },
       });
-  d.register('get_render_issues', (a) => bridge.callTool('get_render_issues', a),
+  d.register(
+      'get_render_issues', (a) => bridge.callTool('get_render_issues', a),
       description: 'Rendering problems (overflow, constraints)');
   d.register('get_frame_stats', (a) => bridge.callTool('get_frame_stats', a),
       description: 'Frame timing metrics (FPS, jank)');
-  d.register('analyze_performance', (a) => bridge.callTool('analyze_performance', a),
+  d.register(
+      'analyze_performance', (a) => bridge.callTool('analyze_performance', a),
       description: 'Performance analysis pipeline');
   d.register('analyze_rebuilds', (a) => bridge.callTool('analyze_rebuilds', a),
       description: 'Most frequently rebuilding widgets');
   d.register('get_issues', (a) => bridge.callTool('get_issues', a),
-      description: 'Deduplicated issues: exceptions, layout/render, lifecycle, reported',
+      description:
+          'Deduplicated issues: exceptions, layout/render, lifecycle, reported',
       schema: {
         'type': 'object',
         'properties': {
@@ -70,7 +78,10 @@ void registerBridgeTools(ToolDispatcher d, VmBridge bridge) {
         'type': 'object',
         'properties': {
           'sinceSeq': {'type': 'integer', 'default': 0, 'minimum': 0},
-          'level': {'type': 'string', 'enum': ['debug', 'info', 'warning', 'error']},
+          'level': {
+            'type': 'string',
+            'enum': ['debug', 'info', 'warning', 'error']
+          },
           'grep': {'type': 'string'},
           'limit': {'type': 'integer', 'default': 200, 'minimum': 0},
         },

@@ -49,8 +49,8 @@ class ErrorReport {
   factory ErrorReport.fromJson(Map<String, dynamic> json) => ErrorReport(
         id: json['id'] as String,
         capturedAt: DateTime.parse(json['capturedAt'] as String),
-        category:
-            ErrorCategory.values.byName(json['category'] as String? ?? 'unknown'),
+        category: ErrorCategory.values
+            .byName(json['category'] as String? ?? 'unknown'),
         message: json['message'] as String,
         stackTrace: json['stackTrace'] as String?,
         context: json['context'] as Map<String, dynamic>?,

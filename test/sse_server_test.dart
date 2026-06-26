@@ -93,7 +93,8 @@ void main() {
       expect(sseResponses, hasLength(1));
       final rpc = sseResponses.first;
       expect(rpc['id'], 1);
-      expect((rpc['result'] as Map<String, dynamic>)['protocolVersion'], '2024-11-05');
+      expect((rpc['result'] as Map<String, dynamic>)['protocolVersion'],
+          '2024-11-05');
 
       // Cancel before force-closing to avoid HttpException on the background listener.
       await sub.cancel();

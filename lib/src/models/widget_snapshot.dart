@@ -34,7 +34,8 @@ class WidgetNode {
                 Map<String, dynamic>.from(json['bounds'] as Map)),
         properties: Map<String, String>.from(json['properties'] as Map? ?? {}),
         children: (json['children'] as List? ?? [])
-            .map((c) => WidgetNode.fromJson(Map<String, dynamic>.from(c as Map)))
+            .map(
+                (c) => WidgetNode.fromJson(Map<String, dynamic>.from(c as Map)))
             .toList(),
         rebuildCount: json['rebuildCount'] as int? ?? 0,
       );
@@ -51,8 +52,9 @@ class WidgetNode {
       };
 
   int get totalNodes => 1 + children.fold(0, (s, c) => s + c.totalNodes);
-  int get maxDepth =>
-      children.isEmpty ? depth : children.map((c) => c.maxDepth).reduce((a, b) => a > b ? a : b);
+  int get maxDepth => children.isEmpty
+      ? depth
+      : children.map((c) => c.maxDepth).reduce((a, b) => a > b ? a : b);
 }
 
 @immutable

@@ -36,7 +36,6 @@ class FlutterAiDevtoolsException implements Exception {
   final Object? cause;
 
   @override
-  String toString() =>
-      'FlutterAiDevtoolsException: $message'
+  String toString() => 'FlutterAiDevtoolsException: $message'
       '${cause != null ? '\nCaused by: $cause' : ''}';
 }

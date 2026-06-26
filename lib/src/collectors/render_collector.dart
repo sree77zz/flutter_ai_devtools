@@ -53,8 +53,8 @@ class RenderCollector extends BaseCollector {
     ));
 
     store.addIssue(Issue(
-      signature:
-          issueSignature(IssueCategory.layoutRender, '${hit.kind.name}|$widgetType'),
+      signature: issueSignature(
+          IssueCategory.layoutRender, '${hit.kind.name}|$widgetType'),
       category: IssueCategory.layoutRender,
       severity: hit.severity,
       source: IssueSource.detected,

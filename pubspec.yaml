@@ -1,9 +1,7 @@
 name: flutter_ai_devtools
-description: >
-  AI-native Flutter runtime intelligence platform. Exposes Flutter app internals
-  (widget tree, routes, errors, frames, renders) to AI clients (Claude, Cursor,
-  Gemini, Codex, VSCode) via MCP/JSON-RPC 2.0. Framework-agnostic, event-driven,
-  modular, pub.dev production quality.
+description: >-
+  Surface a running Flutter app's live logs, errors, issues, routes, widget
+  tree, and frame metrics to AI clients (Claude, etc.) over MCP. Terminal-free.
 version: 0.1.0
 repository: https://github.com/sree77zz/flutter_ai_devtools
 issue_tracker: https://github.com/sree77zz/flutter_ai_devtools/issues

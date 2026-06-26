@@ -14,7 +14,8 @@ Future<void> _writeMcpJson() async {
   final existing = await file.exists() ? await file.readAsString() : null;
   try {
     await file.writeAsString(mergeMcpJson(existing));
-    stdout.writeln('✓ Merged flutter_ai_devtools into .mcp.json (stdio transport)');
+    stdout.writeln(
+        '✓ Merged flutter_ai_devtools into .mcp.json (stdio transport)');
   } on FormatException {
     stdout.writeln('⚠ .mcp.json exists but could not be parsed — leaving it '
         'unchanged. Add a "flutter_ai_devtools" stdio server (command: dart, '

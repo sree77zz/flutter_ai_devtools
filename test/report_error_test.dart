@@ -5,16 +5,22 @@ void main() {
   // Disable collectors so start() installs no timers/FlutterError hooks — we
   // only need _store set so reportError is live.
   const noCollectors = CollectorConfig(
-      widgets: false, frames: false, errors: false,
-      routes: false, renders: false, lifecycle: false);
+      widgets: false,
+      frames: false,
+      errors: false,
+      routes: false,
+      renders: false,
+      lifecycle: false);
 
   test('reportError/reportIssue no-op before start()', () {
-    expect(() => FlutterAiDevtools.reportError(Exception('x'), StackTrace.current),
+    expect(
+        () => FlutterAiDevtools.reportError(Exception('x'), StackTrace.current),
         returnsNormally);
     expect(() => FlutterAiDevtools.reportIssue('x'), returnsNormally);
   });
 
-  test('reportError records a reported issue with category + context', () async {
+  test('reportError records a reported issue with category + context',
+      () async {
     await FlutterAiDevtools.start(collectors: noCollectors);
     addTearDown(FlutterAiDevtools.stop);
 

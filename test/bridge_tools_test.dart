@@ -46,13 +46,20 @@ void main() {
 
     test('get_logs honors sinceSeq cursor and level filter', () async {
       buffer.addLog(LogEntry(
-          seq: 0, timestamp: DateTime(2026), level: LogLevel.info,
-          source: LogSource.stdout, message: 'a'));
+          seq: 0,
+          timestamp: DateTime(2026),
+          level: LogLevel.info,
+          source: LogSource.stdout,
+          message: 'a'));
       buffer.addLog(LogEntry(
-          seq: 0, timestamp: DateTime(2026), level: LogLevel.error,
-          source: LogSource.stderr, message: 'b'));
+          seq: 0,
+          timestamp: DateTime(2026),
+          level: LogLevel.error,
+          source: LogSource.stderr,
+          message: 'b'));
 
-      final res = await d.dispatch('get_logs', {'sinceSeq': 1, 'level': 'error'});
+      final res =
+          await d.dispatch('get_logs', {'sinceSeq': 1, 'level': 'error'});
       final logs = res['logs'] as List;
       expect(logs, hasLength(1));
       expect((logs.first as Map)['message'], 'b');

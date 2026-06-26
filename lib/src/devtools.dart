@@ -109,7 +109,8 @@ class FlutterAiDevtools {
     if (store == null) return;
     final message = error.toString();
     store.addIssue(Issue(
-      signature: issueSignature(IssueCategory.reported, '${category ?? ''}|$message'),
+      signature:
+          issueSignature(IssueCategory.reported, '${category ?? ''}|$message'),
       category: IssueCategory.reported,
       severity: IssueSeverity.error,
       source: IssueSource.reported,
@@ -134,7 +135,8 @@ class FlutterAiDevtools {
     final store = _store;
     if (store == null) return;
     store.addIssue(Issue(
-      signature: issueSignature(IssueCategory.reported, '${category ?? ''}|$title'),
+      signature:
+          issueSignature(IssueCategory.reported, '${category ?? ''}|$title'),
       category: IssueCategory.reported,
       severity: severity,
       source: IssueSource.reported,

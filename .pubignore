@@ -1,0 +1,30 @@
+# Controls what `dart pub publish` includes. A .pubignore overrides the
+# directory's .gitignore, so the build/tooling ignores are repeated here.
+
+# Build & tooling artifacts
+.dart_tool/
+build/
+coverage/
+.DS_Store
+*.log
+
+# Editor / agent / project-local config
+.vscode/
+.idea/
+.claude/
+.superpowers/
+.mcp.json
+
+# Internal design specs & implementation plans (not user-facing package docs)
+docs/
+
+# Example app platform scaffolding (the example/lib + pubspec are enough for the
+# pub.dev example tab; the runner folders are large and not needed)
+example/android/
+example/ios/
+example/macos/
+example/linux/
+example/windows/
+example/web/
+example/.dart_tool/
+example/build/
