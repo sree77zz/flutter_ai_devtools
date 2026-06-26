@@ -56,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('flutter_ai_devtools'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
