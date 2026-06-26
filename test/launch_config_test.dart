@@ -41,6 +41,22 @@ void main() {
       expect(names, containsAll(['My App', 'Flutter + AI DevTools']));
     });
 
+    test('places the AI DevTools config first so it is the default', () {
+      final existing = jsonEncode({
+        'version': '0.2.0',
+        'configurations': [
+          {'name': 'My App', 'request': 'launch', 'type': 'dart'},
+        ],
+      });
+      final out = mergeLaunchConfig(existing);
+      final configs = out['configurations'] as List;
+      expect((configs.first as Map)['name'], 'Flutter + AI DevTools',
+          reason: "VS Code pre-selects the first configuration");
+      final names = configs.map((c) => (c as Map)['name']).toList();
+      expect(names, ['Flutter + AI DevTools', 'My App'],
+          reason: 'ours first, existing configs preserved after');
+    });
+
     test('is idempotent — does not duplicate on re-run', () {
       final first = jsonEncode(mergeLaunchConfig(null));
       final second = mergeLaunchConfig(first);

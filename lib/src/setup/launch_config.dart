@@ -17,7 +17,8 @@ const _kCanonicalArgs = [
 /// configuration, merged into [existingJson] (current file contents, or null).
 /// Other user configurations are preserved untouched; the entry we manage
 /// (matched by name) is refreshed to the canonical args every run — idempotent,
-/// and keeps upgraders' args current.
+/// and keeps upgraders' args current. The managed entry is placed first so VS
+/// Code pre-selects it as the default run target (one-click Run, no flags).
 ///
 /// Throws [FormatException] if [existingJson] is non-empty but not a JSON
 /// object (e.g. it contains JSONC `//` comments). Callers should preserve the
@@ -37,7 +38,7 @@ Map<String, dynamic> mergeLaunchConfig(String? existingJson) {
   final raw = doc['configurations'];
   final configs = (raw is List ? raw : <dynamic>[]).cast<dynamic>()
     ..removeWhere((c) => c is Map && c['name'] == _kConfigName)
-    ..add({
+    ..insert(0, {
       'name': _kConfigName,
       'request': 'launch',
       'type': 'dart',
