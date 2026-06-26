@@ -109,7 +109,7 @@ class VmBridge {
 
   static Map<String, dynamic> _notConnected() => {
         'error': 'Flutter app not connected. Launch the "Flutter + AI DevTools" '
-            'run configuration (or: flutter run --vm-service-port=8181 '
+            'run configuration (or: flutter run --host-vmservice-port=8181 '
             '--disable-service-auth-codes).',
       };
 

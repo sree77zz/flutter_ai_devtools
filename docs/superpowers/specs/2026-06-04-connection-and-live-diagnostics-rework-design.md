@@ -96,12 +96,16 @@ address with no auth token:
   "request": "launch",
   "type": "dart",
   "args": [
-    "--vm-service-port=8181",
     "--host-vmservice-port=8181",
     "--disable-service-auth-codes"
   ]
 }
 ```
+
+> Note: only `--host-vmservice-port` is used. Flutter rejects `--vm-service-port`
+> alongside it ("Only one of … may be specified"). `--host-vmservice-port` pins
+> the host-side port the bridge connects to (the device port is forwarded to it);
+> on desktop the lockfile written by `start()` supplies the URI.
 
 - **Desktop:** the app exposes `ws://127.0.0.1:8181/ws` directly.
 - **Mobile:** launching via this config makes the Dart-Code extension forward the

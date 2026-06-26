@@ -10,7 +10,16 @@ void main() {
       expect(configs, hasLength(1));
       expect((configs.first as Map)['name'], 'Flutter + AI DevTools');
       expect((configs.first as Map)['args'],
-          containsAll(['--vm-service-port=8181', '--disable-service-auth-codes']));
+          containsAll(['--host-vmservice-port=8181', '--disable-service-auth-codes']));
+    });
+
+    test('does not include the conflicting --vm-service-port flag', () {
+      // Flutter rejects --vm-service-port alongside --host-vmservice-port.
+      final out = mergeLaunchConfig(null);
+      final ai = (out['configurations'] as List).firstWhere(
+          (c) => (c as Map)['name'] == 'Flutter + AI DevTools') as Map;
+      expect((ai['args'] as List).any((a) => (a as String).startsWith('--vm-service-port')),
+          isFalse);
     });
 
     test('preserves existing user configurations', () {

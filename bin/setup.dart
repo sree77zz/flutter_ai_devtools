@@ -33,7 +33,7 @@ Future<void> _writeVsCodeLaunch() async {
   } on FormatException {
     stdout.writeln('⚠ .vscode/launch.json exists but could not be parsed '
         '(e.g. contains // comments) — leaving it unchanged. Add a dart launch '
-        'config named "Flutter + AI DevTools" with args --vm-service-port=8181 '
+        'config named "Flutter + AI DevTools" with args '
         '--host-vmservice-port=8181 --disable-service-auth-codes manually.');
   }
 }

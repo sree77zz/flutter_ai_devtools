@@ -2,8 +2,13 @@ import 'dart:convert';
 
 const _kConfigName = 'Flutter + AI DevTools';
 
+// Pin the HOST-side VM-service port so the bridge can reach the app at a known
+// address (essential on devices/emulators, where the device port is forwarded
+// to this host port). `--vm-service-port` is intentionally NOT used: Flutter
+// rejects it alongside `--host-vmservice-port` ("Only one ... may be
+// specified"). On desktop the lockfile written by start() provides the URI, so
+// host-port pinning is not required there.
 const _kCanonicalArgs = [
-  '--vm-service-port=8181',
   '--host-vmservice-port=8181',
   '--disable-service-auth-codes',
 ];
