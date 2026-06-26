@@ -31,12 +31,14 @@ String? resolveCurrentRouteName() {
     if (e is InheritedElement &&
         e.widget.runtimeType.toString() == '_ModalScopeStatus') {
       try {
+        // _ModalScopeStatus.route is private to read by type, but the value is a
+        // public [Route]; cast to it so we use only public APIs after that.
         // ignore: avoid_dynamic_calls
         final route = (e.widget as dynamic).route;
-        // ignore: avoid_dynamic_calls
-        final name = route?.settings?.name as String?;
-        if (name != null) {
-          names.add(name);
+        if (route is Route) {
+          // Named routes report settings.name; anonymous routes fall back to
+          // their runtime type so they are still identifiable.
+          names.add(route.settings.name ?? route.runtimeType.toString());
         }
       } catch (_) {
         // Defensive: skip any element that doesn't conform to expectations.

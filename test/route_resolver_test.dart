@@ -26,6 +26,26 @@ void main() {
     expect(resolveCurrentRouteName(), '/detail');
   });
 
+  testWidgets('falls back to the route type for an unnamed route',
+      (tester) async {
+    final key = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(MaterialApp(
+      navigatorKey: key,
+      home: const Scaffold(body: Text('home')),
+    ));
+    await tester.pumpAndSettle();
+
+    // Anonymous route with no settings.name.
+    unawaited(key.currentState!.push(
+      MaterialPageRoute<void>(builder: (_) => const Scaffold(body: Text('x'))),
+    ));
+    await tester.pumpAndSettle();
+
+    final name = resolveCurrentRouteName();
+    expect(name, isNotNull);
+    expect(name, contains('MaterialPageRoute'));
+  });
+
   testWidgets('returns null when there is no routed content', (tester) async {
     await tester.pumpWidget(const Directionality(
       textDirection: TextDirection.ltr,
