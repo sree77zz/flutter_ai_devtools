@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/issue.dart';
 import 'base_collector.dart';
+import 'error_patterns.dart';
 
 /// Detects widget/state lifecycle violations from [FlutterError.onError]
 /// (setState-after-dispose, use-after-dispose, unmounted access) and records
@@ -30,7 +31,7 @@ class LifecycleCollector extends BaseCollector {
   }
 
   void _classify(String msg) {
-    final title = _match(msg);
+    final title = matchLifecycle(msg);
     if (title == null) return;
     final detail = msg.length > 400 ? '${msg.substring(0, 400)}…' : msg;
     store.addIssue(Issue(
@@ -45,15 +46,5 @@ class LifecycleCollector extends BaseCollector {
       count: 1,
       evidence: const {},
     ));
-  }
-
-  String? _match(String msg) {
-    if (msg.contains('called after dispose()')) return 'setState after dispose';
-    if (msg.contains('used after being disposed')) return 'Object used after dispose';
-    if (msg.contains('has been unmounted') || msg.contains('!_debugLifecycleState')) {
-      return 'Access after unmount';
-    }
-    if (msg.contains('Another exception was thrown')) return 'Cascading exception';
-    return null;
   }
 }

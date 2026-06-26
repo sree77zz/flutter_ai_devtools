@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../models/issue.dart';
 import '../models/render_issue.dart';
 import 'base_collector.dart';
+import 'error_patterns.dart';
 
 /// Detects render-tree problems by intercepting [FlutterError.onError] and
 /// pattern-matching against known layout error strings. Emits both the legacy
@@ -34,7 +35,7 @@ class RenderCollector extends BaseCollector {
   }
 
   void _classify(String msg, FlutterErrorDetails details) {
-    final hit = _match(msg);
+    final hit = matchLayoutRender(msg);
     if (hit == null) return;
 
     final widgetType = details.context?.toString() ?? 'Unknown';
@@ -64,18 +65,5 @@ class RenderCollector extends BaseCollector {
       count: 1,
       evidence: {'widget': widgetType},
     ));
-  }
-
-  ({String title, RenderIssueKind kind, IssueSeverity severity})? _match(String msg) {
-    if (msg.contains('overflowed by') || msg.contains('RenderFlex overflowed')) {
-      return (title: 'Render overflow', kind: RenderIssueKind.overflow, severity: IssueSeverity.error);
-    }
-    if (msg.contains('Unbounded') || msg.contains('forces an infinite')) {
-      return (title: 'Unbounded constraints', kind: RenderIssueKind.unboundedConstraints, severity: IssueSeverity.warning);
-    }
-    if (msg.contains('intrinsic')) {
-      return (title: 'Intrinsic measurement', kind: RenderIssueKind.intrinsicMeasurement, severity: IssueSeverity.warning);
-    }
-    return null;
   }
 }

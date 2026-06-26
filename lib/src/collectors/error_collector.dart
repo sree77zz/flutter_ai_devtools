@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/error_report.dart';
 import '../models/issue.dart';
 import 'base_collector.dart';
+import 'error_patterns.dart';
 
 class ErrorCollector extends BaseCollector {
   ErrorCollector({required super.store, required super.config});
@@ -39,18 +40,23 @@ class ErrorCollector extends BaseCollector {
       context: {'library': d.library ?? 'unknown'},
       isFatal: false,
     ));
-    store.addIssue(Issue(
-      signature: issueSignature(IssueCategory.exception, msg),
-      category: IssueCategory.exception,
-      severity: IssueSeverity.error,
-      source: IssueSource.detected,
-      title: msg.length > 80 ? '${msg.substring(0, 80)}…' : msg,
-      detail: msg,
-      firstSeen: DateTime.now(),
-      lastSeen: DateTime.now(),
-      count: 1,
-      evidence: {'library': d.library ?? 'unknown'},
-    ));
+    final handledElsewhere =
+        (config.renders && matchLayoutRender(msg) != null) ||
+        (config.lifecycle && matchLifecycle(msg) != null);
+    if (!handledElsewhere) {
+      store.addIssue(Issue(
+        signature: issueSignature(IssueCategory.exception, msg),
+        category: IssueCategory.exception,
+        severity: IssueSeverity.error,
+        source: IssueSource.detected,
+        title: msg.length > 80 ? '${msg.substring(0, 80)}…' : msg,
+        detail: msg,
+        firstSeen: DateTime.now(),
+        lastSeen: DateTime.now(),
+        count: 1,
+        evidence: {'library': d.library ?? 'unknown'},
+      ));
+    }
   }
 
   bool _onPlatform(Object error, StackTrace stack) {
