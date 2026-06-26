@@ -11,6 +11,7 @@ import 'collectors/route_collector.dart';
 import 'collectors/widget_collector.dart';
 import 'config.dart';
 import 'lockfile.dart';
+import 'models/issue.dart';
 import 'service_extensions.dart';
 import 'store/runtime_store.dart';
 
@@ -21,6 +22,7 @@ class FlutterAiDevtools {
   static RouteCollector? _routeCollector;
   static final List<BaseCollector> _collectors = [];
   static bool _running = false;
+  static bool _extensionsRegistered = false;
 
   static final NavigatorObserver observer = _DelegatingNavigatorObserver();
 
@@ -78,7 +80,10 @@ class FlutterAiDevtools {
 
   static Future<void> _registerExtensions(RuntimeStore store) async {
     if (kIsWeb) return;
-    registerServiceExtensions(store);
+    if (!_extensionsRegistered) {
+      registerServiceExtensions(store);
+      _extensionsRegistered = true;
+    }
     // Write VM URI to lockfile so bin/serve.dart can discover it on desktop.
     try {
       final info = await dev.Service.getInfo();
@@ -86,6 +91,57 @@ class FlutterAiDevtools {
     } catch (_) {
       // VM service not available (release mode or unsupported platform).
     }
+  }
+
+  /// Reports a handled error so it surfaces in `get_issues`. No-op when devtools
+  /// is not started, so calls are safe to leave in production code paths.
+  static void reportError(
+    Object error,
+    StackTrace stackTrace, {
+    String? category,
+    Map<String, dynamic>? context,
+  }) {
+    final store = _store;
+    if (store == null) return;
+    final message = error.toString();
+    store.addIssue(Issue(
+      signature: issueSignature(IssueCategory.reported, '${category ?? ''}|$message'),
+      category: IssueCategory.reported,
+      severity: IssueSeverity.error,
+      source: IssueSource.reported,
+      title: message.length > 80 ? '${message.substring(0, 80)}…' : message,
+      detail: '$message\n$stackTrace',
+      firstSeen: DateTime.now(),
+      lastSeen: DateTime.now(),
+      count: 1,
+      evidence: {...?context},
+      domainCategory: category,
+    ));
+  }
+
+  /// Reports a non-exception problem (validation failure, invariant break) so it
+  /// surfaces in `get_issues`. No-op when devtools is not started.
+  static void reportIssue(
+    String title, {
+    IssueSeverity severity = IssueSeverity.warning,
+    String? category,
+    Map<String, dynamic>? context,
+  }) {
+    final store = _store;
+    if (store == null) return;
+    store.addIssue(Issue(
+      signature: issueSignature(IssueCategory.reported, '${category ?? ''}|$title'),
+      category: IssueCategory.reported,
+      severity: severity,
+      source: IssueSource.reported,
+      title: title,
+      detail: title,
+      firstSeen: DateTime.now(),
+      lastSeen: DateTime.now(),
+      count: 1,
+      evidence: {...?context},
+      domainCategory: category,
+    ));
   }
 }
 
